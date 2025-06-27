@@ -331,6 +331,9 @@ def translate_text(text, api_key, target="en"):
     except Exception as e:
         return text  # fallback to original
 
+def linkify_cashtags(text):
+    return re.sub(r'\$(\w+)', r'<a href="https://finance.yahoo.com/quote/\1" target="_blank">$\1</a>', text)
+    
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
     try:
@@ -648,6 +651,8 @@ if tab == "Bitcoin News":
         
         for tweet in tweets:
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
+            escaped_text = html.escape(translated_text)
+            final_text = linkify_cashtags(escaped_text)
             with st.container():
                 st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
                 st.markdown(translated_text)
