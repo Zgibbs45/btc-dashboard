@@ -912,11 +912,15 @@ if tab == "Live Market":
                     if inline_url:
                         st.markdown(f"🔗 [**View the most recent SEC filing in EDGAR**]({inline_url})")
 
-                    for label, info in combined_metrics.items():
+                    for label in sorted(combined_metrics.keys()):
+                        info = combined_metrics[label]
                         val = info["value"]
                         source = info["source"]
                         date = info["date"]
-                        formatted_date = f" _(from {source}, {date})_" if date else f" _(from {source})_"
+                        if source == "Press Release" and press_data and press_data.get("url"):
+                            formatted_date = f""" _(from {source}, {date}, <a href="{press_data['url']}" target="_blank">View Release</a>)_"""
+                        else:
+                            formatted_date = f" _(from {source}, {date})_" if date else f" _(from {source})_"
 
                         # Format value
                         if isinstance(val, (int, float)):
@@ -927,4 +931,4 @@ if tab == "Live Market":
                         else:
                             val_display = val
 
-                        st.markdown(f"- **{label}**: {val_display}{formatted_date}")
+                        st.markdown(f"- **{label}**: {val_display}{formatted_date}", unsafe_allow_html=True)
