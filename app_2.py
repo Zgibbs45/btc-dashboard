@@ -851,7 +851,7 @@ if tab == "Live Market":
 
             with col2:
                # --- Combined Filing & Press Metrics ---
-                st.subheader("📊 Combined Financial Metrics")
+                st.subheader("📊 Press Release & SEC Filing Metrics")
 
                 ticker_upper = sym.upper()
                 company_name = info.get("longName") or ticker_upper
