@@ -850,62 +850,81 @@ if tab == "Live Market":
                     )
 
             with col2:
-                st.subheader("📄 Latest Press Filing & SEC Filing Metrics")
+               # --- Combined Filing & Press Metrics ---
+                st.subheader("📊 Combined Financial Metrics")
+
                 ticker_upper = sym.upper()
-                cik = cik_map.get(ticker_upper)
-                if cik:
-                    inline_url = get_latest_edgar_inline_url(cik)
-                    if inline_url:
-                        st.markdown("---")
-                        st.markdown(f"🔗 [**View the most recent SEC filing in EDGAR**]({inline_url})")
-                    else:
-                        st.info("No recent EDGAR filing link found.")
-                    from collections import Counter
+                company_name = info.get("longName") or ticker_upper
+                inline_url = get_latest_edgar_inline_url(cik)
+                
+                # Get latest SEC facts
+                facts = {}
+                dates = []
+                latest_accn = None
 
-                    facts = {}
-                    dates = []
-                    latest_accn = None  # to store one accession number for the filing link
+                for label, tags in SEC_FACTS.items():
+                    val, end_date, accn = get_latest_sec_fact_with_fallback(cik, tags)
+                    if end_date:
+                        dates.append(end_date)
+                    if not latest_accn and accn:
+                        latest_accn = accn
+                    facts[label] = (val, end_date)
 
-                    for label, tags in SEC_FACTS.items():
-                        val, end_date, accn = get_latest_sec_fact_with_fallback(cik, tags)
-                        if end_date:
-                            dates.append(end_date)
-                        if not latest_accn and accn:
-                            latest_accn = accn  # store the first one
-                        facts[label] = (val, end_date)
+                # Get latest press release data
+                company_name = info.get("longName") or ticker_upper
+                press_data = get_latest_press_release_metrics(company_name, ticker_upper)
 
-                    # Most common reporting date across all facts
-                    if dates:
-                        common_date = Counter(dates).most_common(1)[0][0]
-                    else:
-                        common_date = None
+                # --- Combine them ---
+                combined_metrics = {}
 
-                    for label, (val, date) in facts.items():
-                        if date == common_date:
-                            if val is not None:
-                                if label == "Bitcoin Held":
-                                    formatted_val = f"{val:,.0f} BTC"
-                                else:
-                                    formatted_val = f"(${abs(val):,.2f})" if val < 0 else f"${val:,.2f}"
-                                st.markdown(f"- **{label}**: {formatted_val} _(Period ending {date})_")
-                            else:
-                                st.markdown(f"- **{label}**: *Not available*")
+                # SEC values
+                for label, (val, date) in facts.items():
+                    if val is not None:
+                        combined_metrics[label] = {
+                            "value": val,
+                            "source": "SEC Filing",
+                            "date": date
+                        }
+
+                # Press overrides SEC if newer
+                if press_data and press_data.get("metrics"):
+                    for label, val_str in press_data["metrics"].items():
+                        if label not in combined_metrics:
+                            combined_metrics[label] = {
+                                "value": val_str,
+                                "source": "Press Release",
+                                "date": press_data.get("date")
+                            }
                         else:
-                            st.markdown(f"- **{label}**: *Not available*")
-                else:
-                    st.warning("CIK not found for this ticker.")
-                st.markdown("---")
-            st.subheader("📢 Press Release Metrics")
+                            sec_date = combined_metrics[label]["date"]
+                            press_date = press_data.get("date")
+                            if press_date and (sec_date is None or press_date > sec_date):
+                                combined_metrics[label] = {
+                                    "value": val_str,
+                                    "source": "Press Release",
+                                    "date": press_date
+                                }
 
-            company_name = info.get("longName") or ticker_upper
-            press_data = get_latest_press_release_metrics(company_name, ticker_upper)
-
-            if press_data:
-                st.markdown(f"📰 [**{press_data['title']}**]({press_data['url']}) — *{press_data['date']}*")
-                if press_data["metrics"]:
-                    for label, val in press_data["metrics"].items():
-                        st.markdown(f"- **{label}**: {val}")
+                # --- Display combined result ---
+                if not combined_metrics:
+                    st.info("No financial metrics available from SEC or press release.")
                 else:
-                    st.info("No clean financial metrics found in the press release.")
-            else:
-                st.info("No recent press release found.")
+                    if inline_url:
+                        st.markdown(f"🔗 [**View the most recent SEC filing in EDGAR**]({inline_url})")
+
+                    for label, info in combined_metrics.items():
+                        val = info["value"]
+                        source = info["source"]
+                        date = info["date"]
+                        formatted_date = f" _(from {source}, {date})_" if date else f" _(from {source})_"
+
+                        # Format value
+                        if isinstance(val, (int, float)):
+                            if "Bitcoin" in label:
+                                val_display = f"{val:,.0f} BTC"
+                            else:
+                                val_display = f"${val:,.2f}"
+                        else:
+                            val_display = val
+
+                        st.markdown(f"- **{label}**: {val_display}{formatted_date}")
