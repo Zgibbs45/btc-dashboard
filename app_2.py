@@ -668,29 +668,30 @@ if tab == "News":
         
             st.markdown(tweet_html, unsafe_allow_html=True)
 
-# Add media as inline HTML
-for url in tweet["media"]:
-    if url.lower().endswith((".jpg", ".jpeg", ".png")):
-        tweet_html += f"""
-            <img src="{url}" style="width:100%; border-radius: 6px; margin-top: 8px;"/>
-        """
-    elif url.lower().endswith((".mp4", ".mov", ".webm")):
-        tweet_html += f"""
-            <video controls style="width:100%; border-radius: 6px; margin-top: 8px;">
-                <source src="{url}">
-                Your browser does not support the video tag.
-            </video>
-        """
-    else:
-        tweet_html += f"""<div><a href="{url}" target="_blank">View Media</a></div>"""
+            # Add media as inline HTML
+            for url in tweet["media"]:
+                if url.lower().endswith((".jpg", ".jpeg", ".png")):
+                    tweet_html += f"""
+                        <img src="{url}" style="width:100%; border-radius: 6px; margin-top: 8px;"/>
+                    """
+                elif url.lower().endswith((".mp4", ".mov", ".webm")):
+                    tweet_html += f"""
+                        <video controls style="width:100%; border-radius: 6px; margin-top: 8px;">
+                            <source src="{url}">
+                            Your browser does not support the video tag.
+                        </video>
+                    """
+                else:
+                    tweet_html += f"""<div><a href="{url}" target="_blank">View Media</a></div>"""
 
-# Close the tweet box
-tweet_html += "</div>"
+            # Close the tweet box
+            tweet_html += "</div>"
 
-# Render the whole tweet
-st.markdown(tweet_html, unsafe_allow_html=True)
+            # Render the whole tweet
+            st.markdown(tweet_html, unsafe_allow_html=True)
+            
     # General News
-        with col2:
+    with col2:
             st.subheader("📰 Bitcoin News")
 
             # Pills for filtering
