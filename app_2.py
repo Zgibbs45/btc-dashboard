@@ -5,6 +5,8 @@ import yfinance as yf
 import base64
 import os
 import time
+import re
+import html
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
