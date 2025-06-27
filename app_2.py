@@ -47,7 +47,7 @@ st.markdown(
 
     /* Sidebar "Select a page" label */
     [data-testid="stSidebar"] label {
-        color: #EEEFF3 !important;
+        color: #000000 !important;
         font-weight: bold;
     }
 
