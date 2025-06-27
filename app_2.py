@@ -250,7 +250,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
 
     sort_map = {"likes": "like_count", "retweets": "retweet_count"}
 
-    from_date = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).replace(microsecond=0).isoformat("T") + "Z"
+    from_date = (datetime.utcnow() - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
