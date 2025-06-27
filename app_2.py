@@ -18,6 +18,7 @@ st.markdown(
     <style>
     /* Lock the sidebar width */
     [data-testid="stSidebar"] {
+        width: 100% !important;
         background-color: #D5EDF8 !important;
     }
 
@@ -637,7 +638,7 @@ if tab == "News":
                     else:
                         st.markdown(f"[View Media]({url})")
         
-                st.markdown("<hr style='margin: 1rem 0; border: 2px solid #D5EDF8;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 1rem 0; border: 3.5px solid #D5EDF8;'>", unsafe_allow_html=True)
                     
     # General News
     with col2:
