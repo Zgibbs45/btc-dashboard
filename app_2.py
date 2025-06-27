@@ -69,6 +69,20 @@ st.markdown(
         background-color: #102A43 !important;
         color: #EEEFF3 !important;
     }
+
+    /* GLOBAL FLAT CORNER STYLE */
+    button, input, select, textarea,
+    div[data-baseweb="select"],
+    .stButton > button,
+    .stTextInput > div,
+    .stSelectbox > div,
+    .stMultiSelect > div,
+    .stDateInput > div,
+    .stRadio > div,
+    .stSlider > div {
+        border-radius: 4px !important;  /* Use 0px for square, 4px for slight curve */
+        box-shadow: none !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
