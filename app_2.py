@@ -6,8 +6,6 @@ from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from datetime import timezone
-from edgar import Company, get_filings
-import edgar
 import os
 
 st.set_page_config(layout="wide")
