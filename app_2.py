@@ -625,19 +625,23 @@ if tab == "News":
         )
 
         # Render tweets
-        for tweet in tweets:
-            with st.container():
-                st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
-                st.markdown(tweet["text"])
-                st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
-                st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
-                for url in tweet["media"]:
-                    if url.lower().endswith((".jpg", ".png", ".jpeg")):
-                        st.image(url, use_container_width=True)
-                    elif url.lower().endswith((".mp4", ".mov", ".webm")):
-                        st.video(url)
-                    else:
-                        st.markdown(f"[View Media]({url})")
+        with st.container():
+            st.markdown(
+                """
+                <div style="
+                    border: 1px solid #DDD;
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    margin-bottom: 12px;
+                    background-color: #FAFAFA;
+                ">
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Existing tweet markup here (name, handle, text, metrics, image, etc.)
+        
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # General News
         with col2:
