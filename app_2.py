@@ -5,6 +5,7 @@ import yfinance as yf
 import base64
 import os
 import time
+import html
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
@@ -625,6 +626,8 @@ if tab == "News":
         )
         
         for tweet in tweets:
+            escaped_text = html.escape(tweet["text"])
+
             tweet_html = f"""
             <div style="
                 border: 1px solid #D5EDF8;
@@ -638,7 +641,7 @@ if tab == "News":
                     &nbsp;• @{tweet['username']} • <i>{format_timestamp(tweet['created_at'])}</i>
                 </div>
         
-                <div style="margin: 12px 0;">{tweet['text']}</div>
+                <div style="margin: 12px 0;">{escaped_text}</div>
         
                 <div style="color: #666; font-size: 14px; margin-bottom: 8px;">
                     🔁 {tweet['retweets']} &nbsp;&nbsp; ❤️ {tweet['likes']}
@@ -689,7 +692,6 @@ if tab == "News":
 
             # Render the whole tweet
             st.markdown(tweet_html, unsafe_allow_html=True)
-            
     # General News
     with col2:
             st.subheader("📰 Bitcoin News")
