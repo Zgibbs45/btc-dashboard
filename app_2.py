@@ -239,7 +239,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         st.markdown(f"**[{art['title']}]({art['url']})**")
         st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
 
-@st.cache_data(ttl=1800)  # Cache for 30 minutes
+@st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
     headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
 
@@ -247,8 +247,6 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
         query = '("CleanSpark" OR #CLSK) -is:retweet has:links'
     else:
         query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet has:links'
-
-    sort_map = {"likes": "like_count", "retweets": "retweet_count"}
 
     from_date = (datetime.utcnow() - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -267,7 +265,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     for attempt in range(3):
         response = requests.get(url, headers=headers, params=params)
         if response.status_code == 429:
-            st.warning("Twitter API rate limit hit. Retrying in 60 seconds...")
+            st.warning("Twitter rate limit hit. Retrying in 60 seconds...")
             time.sleep(60)
         else:
             break
@@ -281,14 +279,9 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
     media_map = {m["media_key"]: m for m in data.get("includes", {}).get("media", [])}
 
-    sorted_tweets = sorted(
-        tweets,
-        key=lambda t: t["public_metrics"].get(sort_map.get(sort_by, "like_count"), 0),
-        reverse=True
-    )[:max_results]
-
+    # Build full tweet results
     results = []
-    for tweet in sorted_tweets:
+    for tweet in tweets:
         user = users.get(tweet["author_id"])
         media_urls = [
             media_map[m].get("url") or media_map[m].get("preview_image_url")
@@ -299,14 +292,22 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
             "username": user["username"] if user else "",
             "name": user["name"] if user else "",
             "profile_img": user.get("profile_image_url", "") if user else "",
-            "created_at": tweet["created_at"][:10],
+            "created_at": tweet["created_at"],
             "likes": tweet["public_metrics"]["like_count"],
             "retweets": tweet["public_metrics"]["retweet_count"],
             "tweet_id": tweet["id"],
             "media": media_urls
         })
 
-    return results
+    # Sort locally
+    if sort_by == "likes":
+        results.sort(key=lambda x: x["likes"], reverse=True)
+    elif sort_by == "retweets":
+        results.sort(key=lambda x: x["retweets"], reverse=True)
+    else:  # published
+        results.sort(key=lambda x: x["created_at"], reverse=True)
+
+    return results[:max_results]
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
