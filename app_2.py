@@ -5,7 +5,6 @@ import yfinance as yf
 import base64
 import os
 import time
-import html
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
@@ -626,72 +625,20 @@ if tab == "News":
         )
         
         for tweet in tweets:
-            escaped_text = html.escape(tweet["text"])
-
-            tweet_html = f"""
-            <div style="
-                border: 1px solid #D5EDF8;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 16px;
-                background-color: #FFFFFF;
-            ">
-                <div style="font-weight: 600; font-size: 15px;">
-                    <a href="https://twitter.com/{tweet['username']}" target="_blank">{tweet['name']}</a>
-                    &nbsp;• @{tweet['username']} • <i>{format_timestamp(tweet['created_at'])}</i>
-                </div>
+            with st.container():
+                st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
+                st.markdown(tweet["text"])
+                st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
+                st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
         
-                <div style="margin: 12px 0;">{escaped_text}</div>
-        
-                <div style="color: #666; font-size: 14px; margin-bottom: 8px;">
-                    🔁 {tweet['retweets']} &nbsp;&nbsp; ❤️ {tweet['likes']}
-                </div>
-        
-                <div style="margin-bottom: 8px;">
-                    <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank">View on Twitter</a>
-                </div>
-            """
-        
-            for url in tweet["media"]:
-                if url.lower().endswith((".jpg", ".jpeg", ".png")):
-                    tweet_html += f"""
-                        <img src="{url}" style="width:100%; border-radius: 6px; margin-top: 8px;"/>
-                    """
-                elif url.lower().endswith((".mp4", ".mov", ".webm")):
-                    tweet_html += f"""
-                        <video controls style="width:100%; border-radius: 6px; margin-top: 8px;">
-                            <source src="{url}">
-                            Your browser does not support the video tag.
-                        </video>
-                    """
-                else:
-                    tweet_html += f"""<div><a href="{url}" target="_blank">View Media</a></div>"""
-        
-            tweet_html += "</div>"
-        
-            st.markdown(tweet_html, unsafe_allow_html=True)
-
-            # Add media as inline HTML
-            for url in tweet["media"]:
-                if url.lower().endswith((".jpg", ".jpeg", ".png")):
-                    tweet_html += f"""
-                        <img src="{url}" style="width:100%; border-radius: 6px; margin-top: 8px;"/>
-                    """
-                elif url.lower().endswith((".mp4", ".mov", ".webm")):
-                    tweet_html += f"""
-                        <video controls style="width:100%; border-radius: 6px; margin-top: 8px;">
-                            <source src="{url}">
-                            Your browser does not support the video tag.
-                        </video>
-                    """
-                else:
-                    tweet_html += f"""<div><a href="{url}" target="_blank">View Media</a></div>"""
-
-            # Close the tweet box
-            tweet_html += "</div>"
-
-            # Render the whole tweet
-            st.markdown(tweet_html, unsafe_allow_html=True)
+                for url in tweet["media"]:
+                    if url.lower().endswith((".jpg", ".png", ".jpeg")):
+                        st.image(url, use_container_width=True)
+                    elif url.lower().endswith((".mp4", ".mov", ".webm")):
+                        st.video(url)
+                    else:
+                        st.markdown(f"[View Media]({url})")
+                    
     # General News
     with col2:
             st.subheader("📰 Bitcoin News")
