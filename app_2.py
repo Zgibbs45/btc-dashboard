@@ -443,9 +443,6 @@ def get_latest_press_release_metrics(company_name, ticker_symbol):
 
 # --- Tabs and Layout Config ---
 st.title("Legal & Market Dashboard")
-edgar.set_identity("CleanSpark Dashboard <zgibbs@cleanspark.com>")
-
-
 with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)  # spacing
     logo = Image.open("cleanspark_logo.png")
