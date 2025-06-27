@@ -96,6 +96,7 @@ st.markdown(
 
 NEWS_API_KEY = st.secrets.get("NEWS_API_KEY", "")
 TWITTER_BEARER_TOKEN = st.secrets.get("TWITTER_BEARER_TOKEN", "")
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 
 SEC_FACTS = {
     "Bitcoin Held": [
@@ -313,6 +314,22 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
         results.sort(key=lambda x: x["created_at"], reverse=True)
 
     return results[:max_results]
+    
+def translate_text(text, api_key, target="en"):
+    if not text.strip():
+        return text  # skip empty
+    try:
+        url = "https://translation.googleapis.com/language/translate/v2"
+        params = {
+            "q": text,
+            "target": target,
+            "key": api_key
+        }
+        resp = requests.post(url, data=params)
+        resp.raise_for_status()
+        return resp.json()["data"]["translations"][0]["translatedText"]
+    except Exception as e:
+        return text  # fallback to original
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
@@ -630,9 +647,10 @@ if tab == "Bitcoin News":
         )
         
         for tweet in tweets:
+            translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
             with st.container():
                 st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
-                st.markdown(tweet["text"])
+                st.markdown(translated_text)
                 st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
                 st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
         
