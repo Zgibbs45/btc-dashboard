@@ -632,7 +632,7 @@ if tab == "News":
                 st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
                 for url in tweet["media"]:
                     if url.lower().endswith((".jpg", ".png", ".jpeg")):
-                        st.image(url, use_column_width=True)
+                        st.image(url, use_container_width=True)
                     elif url.lower().endswith((".mp4", ".mov", ".webm")):
                         st.video(url)
                     else:
