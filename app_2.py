@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from datetime import timezone
 
-
 st.set_page_config(layout="wide")
+
 st.markdown(
     """
     <style>
@@ -19,25 +19,15 @@ st.markdown(
         width: 300px !important;
         min-width: 300px !important;
         max-width: 300px !important;
+        background-color: #102A43 !important;
     }
 
     /* Prevent resizer from showing on hover */
     [data-testid="stSidebar"] + div [data-testid="stResizer"] {
         display: none !important;
     }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-st.markdown(
-    """
-    <style>
-    /* Sidebar background */
-    [data-testid="stSidebar"] {
-        background-color: #102A43 !important;
-    }
 
-    /* Accent elements like pills */
+    /* Sidebar pills/buttons */
     .st-emotion-cache-1avcm0n, .st-emotion-cache-16txtl3 {
         background-color: #00C2D6 !important;
         color: white !important;
@@ -48,22 +38,42 @@ st.markdown(
     h1 {
         color: #102A43;
     }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-st.markdown(
-    """
-    <style>
+
+    /* Global font */
     html, body, [class*="css"]  {
         font-family: 'Segoe UI', sans-serif;
         font-size: 15px;
         line-height: 1.6;
     }
+
+    /* Sidebar "Select a page" label */
+    [data-testid="stSidebar"] label {
+        color: #EEEFF3 !important;
+        font-weight: bold;
+    }
+
+    /* Sidebar selectbox/dropdown styling */
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
+        background-color: #102A43 !important;
+        color: #EEEFF3 !important;
+        border-radius: 5px;
+    }
+
+    /* Input text (search box inside dropdown) */
+    [data-testid="stSidebar"] input {
+        color: #EEEFF3 !important;
+    }
+
+    /* Dropdown list background */
+    [data-testid="stSidebar"] .stSelectbox [role="listbox"] {
+        background-color: #102A43 !important;
+        color: #EEEFF3 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 NEWS_API_KEY = "ea839db4d45f4bea8e06e5b38762d5f1"
 TWITTER_BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAKZq2AEAAAAA7Gx62rJuSBtFw61J5xfNQSsLpsA%3DFdrBHcVYJGPwKUUO5PnQ6nKtYA2s2hVb5T3auWwLbnphdhRpIr"
 
