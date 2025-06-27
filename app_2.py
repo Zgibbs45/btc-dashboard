@@ -4,10 +4,12 @@ import requests
 import yfinance as yf
 import base64
 import os
+import time
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from datetime import timezone
+
 
 st.set_page_config(layout="wide")
 
@@ -237,7 +239,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         st.markdown(f"**[{art['title']}]({art['url']})**")
         st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
     headers = {"Authorization": f"Bearer {TWITTER_BEARER_TOKEN}"}
 
@@ -300,6 +302,16 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
         })
 
     return results
+def get_twitter_data_with_retry(...):
+    retries = 3
+    for i in range(retries):
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 429:
+            wait = 60  # or use `Retry-After` from headers
+            st.warning(f"Rate limit hit. Retrying in {wait} seconds...")
+            time.sleep(wait)
+        else:
+            break
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
