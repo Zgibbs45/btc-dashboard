@@ -18,7 +18,6 @@ st.markdown(
     <style>
     /* Lock the sidebar width */
     [data-testid="stSidebar"] {
-        width: 100% !important;
         background-color: #D5EDF8 !important;
     }
 
