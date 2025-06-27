@@ -623,7 +623,8 @@ if tab == "News":
             sort_by=tw_sort.lower(),  # lowercase for consistency
             max_results=6
         )
-
+        
+    for tweet in tweets:
         with st.container():
                 st.markdown(
                     """
@@ -638,12 +639,12 @@ if tab == "News":
                     unsafe_allow_html=True
                 )
             
-                st.markdown(f"**[{tweets['name']}](https://twitter.com/{tweets['username']})** • @{tweets['username']} • *{format_timestamp(tweets['created_at'])}*")
-                st.markdown(tweets["text"])
-                st.markdown(f"🔁 {tweets['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweets['likes']}")
-                st.markdown(f"[View on Twitter](https://twitter.com/{tweets['username']}/status/{tweets['tweet_id']})")
+                st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
+                st.markdown(tweet["text"])
+                st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
+                st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
             
-                for url in tweets["media"]:
+                for url in tweet["media"]:
                     if url.lower().endswith((".jpg", ".png", ".jpeg")):
                         st.image(url, use_container_width=True)
                     elif url.lower().endswith((".mp4", ".mov", ".webm")):
