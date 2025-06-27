@@ -620,7 +620,7 @@ if tab == "News":
         tweets = get_cleanspark_tweets(
             query_scope=tw_scope_val,
             max_age_days=tw_max_days,
-            sort_by=tw_sort,
+            sort_by=tw_sort.lower(),  # lowercase for consistency
             max_results=6
         )
 
