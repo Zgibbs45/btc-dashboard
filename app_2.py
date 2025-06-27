@@ -509,25 +509,24 @@ def get_latest_press_release_metrics(company_name, ticker_symbol):
 st.title("Legal & Market Dashboard")
 with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)  # spacing
+
     def image_to_base64(path):
         with open(path, "rb") as f:
             data = f.read()
         return base64.b64encode(data).decode()
 
-    # Load and convert image
     img_b64 = image_to_base64("cleanspark_logo.png")
 
-    # Inject into sidebar as raw HTML
-    with st.sidebar:
-        st.markdown("<br>", unsafe_allow_html=True)  # spacing
-        st.markdown(
-            f"""
-            <div style="text-align: center;">
-                <img src="data:image/png;base64,{img_b64}" style="width:90%; max-width:300px; border-radius:10px; display:block; margin:auto;" />
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <a href="https://www.cleanspark.com" target="_blank" title="Visit CleanSpark">
+                <img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:400px; border-radius:10px; display:block; margin:auto;" />
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 tab = st.sidebar.selectbox("Select a page", ["News", "📈 Market & Competition"])
 if tab == "News":
     
