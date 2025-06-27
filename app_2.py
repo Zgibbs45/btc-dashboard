@@ -81,7 +81,14 @@ st.markdown(
     .stSlider > div {
         border-radius: 4px !important;  /* Use 0px for square, 4px for slight curve */
         box-shadow: none !important;
+    
     }
+    
+    /* Hide anchor link icons from all headers */
+    h1 a, h2 a, h3 a, h4 a {
+        display: none !important;
+    }
+    
     </style>
     """,
     unsafe_allow_html=True
