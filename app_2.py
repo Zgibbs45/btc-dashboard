@@ -638,6 +638,8 @@ if tab == "News":
                         st.video(url)
                     else:
                         st.markdown(f"[View Media]({url})")
+        
+                st.markdown("<hr style='margin: 1rem 0; border-color: #D5EDF8;'>", unsafe_allow_html=True)
                     
     # General News
     with col2:
