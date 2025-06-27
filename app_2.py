@@ -18,8 +18,8 @@ st.markdown(
     [data-testid="stSidebar"] {
         width: 300px !important;
         min-width: 300px !important;
-        max-width: 300px !important;
-        background-color: #102A43 !important;
+        max-width: 400px !important;
+        background-color: #D5EDF8 !important;
     }
 
     /* Prevent resizer from showing on hover */
@@ -528,7 +528,6 @@ with st.sidebar:
             """,
             unsafe_allow_html=True
         )
-        st.markdown("<hr>", unsafe_allow_html=True)
 tab = st.sidebar.selectbox("Select a page", ["News", "📈 Market & Competition"])
 if tab == "News":
     
