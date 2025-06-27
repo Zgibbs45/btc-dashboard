@@ -660,13 +660,13 @@ if tab == "News":
 
             # Pills for filtering
             scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
-            gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="gen_scopenews")
+            gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="news_scope_filter")
     
             gen_col1, gen_col2 = st.columns([1, 1])
             with gen_col1:
-                gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="gen_days")
+                gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="news_days_filter")
             with gen_col2:
-                gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="gen_sort")
+                gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="news_sort_filter")
 
             # Handle query + filtering logic
             if gen_scope == "CleanSpark Only":
