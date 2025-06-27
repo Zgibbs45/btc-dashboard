@@ -552,7 +552,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-tab = st.sidebar.selectbox("Select a page", ["News", "📈 Market & Competition"])
+tab = st.sidebar.selectbox("Select a page", ["Bitcoin News", "Live Market"])
 if tab == "News":
     
     day_options = {
