@@ -87,8 +87,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-NEWS_API_KEY = "ea839db4d45f4bea8e06e5b38762d5f1"
-TWITTER_BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAKZq2AEAAAAA7Gx62rJuSBtFw61J5xfNQSsLpsA%3DFdrBHcVYJGPwKUUO5PnQ6nKtYA2s2hVb5T3auWwLbnphdhRpIr"
+NEWS_API_KEY = st.secrets.get("NEWS_API_KEY", "")
+TWITTER_BEARER_TOKEN = st.secrets.get("TWITTER_BEARER_TOKEN", "")
 
 SEC_FACTS = {
     "Bitcoin Held": [
@@ -152,9 +152,9 @@ def format_timestamp(iso_string):
 
     return f"{nice_time} ({relative})"
 
-@st.cache_data(ttl=300) # 5 minutes
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_coingecko_btc_data():
-    url = "https://api.coingecko.com/api/v3/simple/price"
+    url = "https://pro-api.coingecko.com/api/v3/simple/price"
     params = {
         "ids": "bitcoin",
         "vs_currencies": "usd",
@@ -162,8 +162,13 @@ def get_coingecko_btc_data():
         "include_24hr_vol": "true",
         "include_24hr_change": "true"
     }
+    headers = {
+        "x-cg-pro-api-key": st.secrets["COINGECKO_API_KEY"]
+    }
+
     try:
-        resp = requests.get(url, params=params)
+        resp = requests.get(url, params=params, headers=headers)
+        resp.raise_for_status()
         data = resp.json()["bitcoin"]
         return {
             "price": data["usd"],
@@ -171,8 +176,9 @@ def get_coingecko_btc_data():
             "volume": data["usd_24h_vol"],
             "change": data["usd_24h_change"]
         }
-    except:
-        st.warning("Failed to fetch CoinGecko data.")
+    except Exception as e:
+        st.warning("Failed to fetch CoinGecko Pro data.")
+        st.text(f"Error: {e}")
         return {}
 
 def get_history(_ticker, period):
