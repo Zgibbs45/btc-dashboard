@@ -657,7 +657,6 @@ if tab == "Bitcoin News":
             final_text = linkify_cashtags(escaped_text)
             with st.container():
                 st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
-                st.markdown(translated_text)
                 st.markdown(final_text, unsafe_allow_html=True)
                 st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
                 st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
