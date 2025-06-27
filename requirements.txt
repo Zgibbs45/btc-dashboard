@@ -4,4 +4,4 @@ requests
 yfinance
 Pillow
 python-dateutil
-edgar
+edgar==0.2.4
