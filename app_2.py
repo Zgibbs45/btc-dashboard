@@ -656,7 +656,6 @@ if tab == "Bitcoin News":
             safe_text = html.escape(translated_text)
             linkified = linkify_cashtags(safe_text)
             final_text = linkified.replace("\n", "<br>")
-            st.markdown(final_text, unsafe_allow_html=True)
             with st.container():
                 st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
                 st.markdown(final_text, unsafe_allow_html=True)
