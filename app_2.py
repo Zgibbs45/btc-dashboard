@@ -553,7 +553,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 tab = st.sidebar.selectbox("Select a page", ["Bitcoin News", "Live Market"])
-if tab == "News":
+if tab == "Bitcoin News":
     
     day_options = {
         "1 Day": 1,
@@ -681,7 +681,7 @@ if tab == "News":
             )
                     
 # --- HOME TAB ---
-if tab == "📈 Market & Competition":
+if tab == "Live Market":
     btc_metrics = get_coingecko_btc_data()
     btc         = yf.Ticker("BTC-USD")
     col1, col2  = st.columns([2,2])
