@@ -239,9 +239,9 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         st.markdown(f"**[{art['title']}]({art['url']})**")
         st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
 
-@st.cache_data(ttl=1800)
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
-    headers = {"Authorization": f"Bearer {TWITTER_BEARER_TOKEN}"}
+    headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
 
     if query_scope == "CleanSpark":
         query = '("CleanSpark" OR $CLSK OR #CLSK) -is:retweet has:links'
@@ -252,7 +252,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
 
     from_date = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat("T") + "Z"
 
-    url = f"https://api.twitter.com/2/tweets/search/recent"
+    url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
         "query": query,
         "max_results": 20,
@@ -263,7 +263,15 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
         "user.fields": "username,name,profile_image_url"
     }
 
-    response = requests.get(url, headers=headers, params=params)
+    # Retry logic
+    for attempt in range(3):
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 429:
+            st.warning("Twitter API rate limit hit. Retrying in 60 seconds...")
+            time.sleep(60)
+        else:
+            break
+
     if response.status_code != 200:
         st.error(f"Twitter API Error: {response.status_code} — {response.text}")
         return []
@@ -272,15 +280,12 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     tweets = data.get("data", [])
     users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
     media_map = {m["media_key"]: m for m in data.get("includes", {}).get("media", [])}
-    # ✅ Sort tweets locally
-    if sort_by == "published":
-        sorted_tweets = sorted(tweets, key=lambda t: t["created_at"], reverse=True)
-    else:
-        sorted_tweets = sorted(
-            tweets,
-            key=lambda t: t["public_metrics"].get(sort_map.get(sort_by, "like_count"), 0),
-            reverse=True
-        )[:max_results]
+
+    sorted_tweets = sorted(
+        tweets,
+        key=lambda t: t["public_metrics"].get(sort_map.get(sort_by, "like_count"), 0),
+        reverse=True
+    )[:max_results]
 
     results = []
     for tweet in sorted_tweets:
@@ -302,16 +307,6 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
         })
 
     return results
-def get_twitter_data_with_retry(...):
-    retries = 3
-    for i in range(retries):
-        response = requests.get(url, headers=headers, params=params)
-        if response.status_code == 429:
-            wait = 60  # or use `Retry-After` from headers
-            st.warning(f"Rate limit hit. Retrying in {wait} seconds...")
-            time.sleep(wait)
-        else:
-            break
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
