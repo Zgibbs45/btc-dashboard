@@ -624,34 +624,35 @@ if tab == "News":
             max_results=6
         )
 
-   with st.container():
-        st.markdown(
-            """
-            <div style="
-                border: 1px solid #D5EDF8;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 16px;
-                background-color: #FFFFFF;
-            ">
-            """,
-            unsafe_allow_html=True
-        )
-    
-        st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
-        st.markdown(tweet["text"])
-        st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
-        st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
-    
-        for url in tweet["media"]:
-            if url.lower().endswith((".jpg", ".png", ".jpeg")):
-                st.image(url, use_container_width=True)
-            elif url.lower().endswith((".mp4", ".mov", ".webm")):
-                st.video(url)
-            else:
-                st.markdown(f"[View Media]({url})")
+        with st.container():
+                st.markdown(
+                    """
+                    <div style="
+                        border: 1px solid #D5EDF8;
+                        border-radius: 10px;
+                        padding: 16px;
+                        margin-bottom: 16px;
+                        background-color: #FFFFFF;
+                    ">
+                    """,
+                    unsafe_allow_html=True
+                )
+            
+                st.markdown(f"**[{tweets['name']}](https://twitter.com/{tweets['username']})** • @{tweets['username']} • *{format_timestamp(tweets['created_at'])}*")
+                st.markdown(tweets["text"])
+                st.markdown(f"🔁 {tweets['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweets['likes']}")
+                st.markdown(f"[View on Twitter](https://twitter.com/{tweets['username']}/status/{tweets['tweet_id']})")
+            
+                for url in tweets["media"]:
+                    if url.lower().endswith((".jpg", ".png", ".jpeg")):
+                        st.image(url, use_container_width=True)
+                    elif url.lower().endswith((".mp4", ".mov", ".webm")):
+                        st.video(url)
+                    else:
+                        st.markdown(f"[View Media]({url})")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+
     # General News
         with col2:
             st.subheader("📰 Bitcoin News")
