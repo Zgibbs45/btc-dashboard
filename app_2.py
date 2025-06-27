@@ -654,7 +654,7 @@ if tab == "Bitcoin News":
         for tweet in tweets:
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
             escaped_text = html.escape(translated_text)
-            final_text = linkify_cashtags(escaped_text)
+            final_text = linkify_cashtags(translated_text)
             with st.container():
                 st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
                 st.markdown(final_text, unsafe_allow_html=True)
