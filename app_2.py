@@ -909,9 +909,6 @@ if tab == "Live Market":
                 if not combined_metrics:
                     st.info("No financial metrics available from SEC or press release.")
                 else:
-                    if inline_url:
-                        st.markdown(f"🔗 [**View the most recent SEC filing in EDGAR**]({inline_url})")
-
                     for label in sorted(combined_metrics.keys()):
                         info = combined_metrics[label]
                         val = info["value"]
@@ -919,6 +916,8 @@ if tab == "Live Market":
                         date = info["date"]
                         if source == "Press Release" and press_data and press_data.get("url"):
                             formatted_date = f""" _(from {source}, {date}, <a href="{press_data['url']}" target="_blank">View Release</a>)_"""
+                        elif source == "SEC Filing" and inline_url:
+                            formatted_date = f""" _(from {source}, {date}, <a href="{inline_url}" target="_blank">View Filing</a>)_"""
                         else:
                             formatted_date = f" _(from {source}, {date})_" if date else f" _(from {source})_"
 
