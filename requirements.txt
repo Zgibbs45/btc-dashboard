@@ -5,3 +5,4 @@ yfinance
 Pillow
 python-dateutil
 edgar
+pycoingecko
