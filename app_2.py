@@ -139,7 +139,7 @@ range_options = {
     "1 Day": "1d", "1 Week": "5d", "1 Month": "1mo", "6 Months": "6mo", "1 Year": "1y"
 }
 
-competitor_tickers = ["CLSK", "HUT", "CORZ", "MARA", "IREN", "RIOT", "CIFR", "BITF"]
+competitor_tickers = ["CLSK", "BITF", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "MTPLF", "RIOT", "WULF"]
 
 # --- Helper Functions ---
 
@@ -952,8 +952,8 @@ if tab == "Live Market":
     st.subheader("Live Competiton View")
     competitors = get_competitor_prices(competitor_tickers)
 
-    m1, m2, m3, m4, m5,m6 ,m7, m8= st.columns(8)
-    col_map = [m1, m2, m3, m4, m5, m6, m7, m8]
+    m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12= st.columns(12)
+    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12]
 
     for i, comp in enumerate(competitors):
         if i >= len(col_map):
