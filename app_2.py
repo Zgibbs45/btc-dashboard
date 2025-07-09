@@ -178,7 +178,7 @@ def get_coingecko_btc_data():
         "include_24hr_change": "true"
     }
     headers = {
-        "x-cg-pro-api-key": "CG-XLSHttdAb825pCDTSpHNsb5k"
+        "x-cg-pro-api-key": st.secrets["COINGECKO_API_KEY"]
     }
 
     try:
@@ -207,7 +207,7 @@ def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=
     
     url = (
         f"https://newsapi.org/v2/everything?q={term}&from={from_date}&sortBy={sort_by}"
-        f"&language=en&pageSize={page_size}&page={page}&apiKey={NEWS_API_KEY}"
+        f"&language=en&pageSize={page_size}&page={page}&apiKey={st.secrets["NEWS_API_KEY"]}"
     )
     
     if domains:
@@ -254,7 +254,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
-    headers = {"Authorization": f"Bearer {'AAAAAAAAAAAAAAAAAAAAAKZq2AEAAAAAm3CFDAgJjX0NtHI8Jp6qnSnU7gk%3D2MMVZjGiOyzEbUBDTn264dR8ouOQ2JySqYnwOxj235QtnDnqvL'}"}
+    headers = {"Authorization": f"Bearer {'st.secrets["TWITTER_BEARER_TOKEN"]'}"}
 
     if query_scope == "CleanSpark":
         query = '("CleanSpark" OR #CLSK) -is:retweet has:links'
