@@ -372,6 +372,8 @@ def get_competitor_prices(symbols):
 
 @st.cache_data(ttl=900)
 def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_duration=90, tolerance=10):
+    if cik is None:
+        return None, None, None
     cik_clean = str(int(cik)).zfill(10)
     headers = {"User-Agent": "CleanSpark Dashboard <zgibbs@cleanspark.com>"}
 
@@ -1037,13 +1039,15 @@ if tab == "Live Market":
         for label in SEC_FACTS.keys():
             row[label] = sec_data.get(label, None)
 
-        # Final links
+         # Final links
         if sources_used:
             link_list = []
             for source, date, url in sorted(sources_used, key=lambda x: x[1], reverse=True):
-                safe_url = quote(url, safe=':/?=&')
-                link_list.append(f'<a href="{safe_url}" target="_blank">{date} ({source})</a>')
-            row["Last Report"] = " • ".join(link_list)
+                if isinstance(url, str) and url.strip():
+                    safe_url = quote(url, safe=':/?=&')
+                    link_list.append(f'<a href="{safe_url}" target="_blank">{date} ({source})</a>')
+
+            row["Last Report"] = " • ".join(link_list) if link_list else "-"
         else:
             row["Last Report"] = "-"
 
