@@ -1041,7 +1041,7 @@ if tab == "Live Market":
         if sources_used:
             link_list = []
             for source, date, url in sorted(sources_used, key=lambda x: x[1], reverse=True):
-                safe_url = quote(url, safe=':/?=&')
+                safe_url = quote(url.decode(), safe=':/?=&')
                 link_list.append(f'<a href="{safe_url}" target="_blank">{date} ({source})</a>')
             row["Last Report"] = " • ".join(link_list)
         else:
