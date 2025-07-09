@@ -952,8 +952,8 @@ if tab == "Live Market":
     st.subheader("Live Competiton View")
     competitors = get_competitor_prices(competitor_tickers)
 
-    m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12= st.columns(12)
-    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12]
+    m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11= st.columns(11)
+    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11]
 
     for i, comp in enumerate(competitors):
         if i >= len(col_map):
