@@ -254,7 +254,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
-    headers = {"Authorization": f"Bearer {'st.secrets["TWITTER_BEARER_TOKEN"]'}"}
+    headers = {"Authorization": f"Bearer {st.secrets["TWITTER_BEARER_TOKEN"]}"}
 
     if query_scope == "CleanSpark":
         query = '("CleanSpark" OR #CLSK) -is:retweet has:links'
