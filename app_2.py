@@ -7,10 +7,13 @@ import os
 import time
 import re
 import html
+import altair as alt
+from pycoingecko import CoinGeckoAPI
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from datetime import timezone
+from urllib.parse import quote
 
 
 st.set_page_config(layout="wide")
@@ -96,9 +99,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-NEWS_API_KEY = st.secrets.get("NEWS_API_KEY", "")
-TWITTER_BEARER_TOKEN = st.secrets.get("TWITTER_BEARER_TOKEN", "")
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+NEWS_API_KEY = "ea839db4d45f4bea8e06e5b38762d5f1"
+TWITTER_BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAKZq2AEAAAAAm3CFDAgJjX0NtHI8Jp6qnSnU7gk%3D2MMVZjGiOyzEbUBDTn264dR8ouOQ2JySqYnwOxj235QtnDnqvL"
+GOOGLE_API_KEY = "AIzaSyD9dmLU53rSBq5fW_LqHb_FwA7bHUmZoH8"
+COINGECKO_API_KEY = "CG-XLSHttdAb825pCDTSpHNsb5k"
 
 SEC_FACTS = {
     "Bitcoin Held": [
@@ -127,14 +131,15 @@ SEC_FACTS = {
         "us-gaap:EarningsPerShareDiluted",
         "us-gaap:IncomeLossFromContinuingOperationsPerDilutedShare",
         "us-gaap:BusinessAcquisitionProFormaEarningsPerShareDiluted"
-    ]
+    ],
+    "EH/s": []
 }
 
 range_options = {
     "1 Day": "1d", "1 Week": "5d", "1 Month": "1mo", "6 Months": "6mo", "1 Year": "1y"
 }
 
-competitor_tickers = ["MARA", "RIOT", "CIFR", "HUT", "BITF"]
+competitor_tickers = ["CLSK", "HUT", "CORZ", "MARA", "IREN", "RIOT", "CIFR", "BITF"]
 
 # --- Helper Functions ---
 
@@ -173,7 +178,7 @@ def get_coingecko_btc_data():
         "include_24hr_change": "true"
     }
     headers = {
-        "x-cg-pro-api-key": st.secrets["COINGECKO_API_KEY"]
+        "x-cg-pro-api-key": "CG-XLSHttdAb825pCDTSpHNsb5k"
     }
 
     try:
@@ -198,7 +203,7 @@ def get_history(_ticker, period):
 @st.cache_data(ttl=1800) # 30 minutes
 def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=30, page=1, domains=None):
     term = f"{query} -{exclude}" if exclude else query
-    from_date = (datetime.now() - timedelta(days=from_days)).strftime("%Y-%m-%d")
+    from_date = (datetime.now(timezone.utc) - timedelta(days=from_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     
     url = (
         f"https://newsapi.org/v2/everything?q={term}&from={from_date}&sortBy={sort_by}"
@@ -249,14 +254,14 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
-    headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
+    headers = {"Authorization": f"Bearer {'AAAAAAAAAAAAAAAAAAAAAKZq2AEAAAAAm3CFDAgJjX0NtHI8Jp6qnSnU7gk%3D2MMVZjGiOyzEbUBDTn264dR8ouOQ2JySqYnwOxj235QtnDnqvL'}"}
 
     if query_scope == "CleanSpark":
         query = '("CleanSpark" OR #CLSK) -is:retweet has:links'
     else:
         query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet has:links'
 
-    from_date = (datetime.utcnow() - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from_date = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
@@ -338,44 +343,29 @@ def linkify_cashtags(text):
     
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
-    try:
-        data = yf.download(
-            tickers=" ".join(symbols),
-            period="2d",
-            interval="1d",
-            group_by="ticker",
-            auto_adjust=True,
-            progress=False,
-            threads=True
-        )
-    except Exception as e:
-        st.error(f"Failed to fetch batch stock data: {e}")
-        return []
-
     results = []
 
     for sym in symbols:
         try:
-            df = data[sym] if len(symbols) > 1 else data
-            if df.empty:
+            ticker = yf.Ticker(sym)
+            info = ticker.get_info()
+
+            price = info.get("regularMarketPrice")
+            prev_close = info.get("regularMarketPreviousClose")
+
+            if price is None or prev_close is None or prev_close == 0:
                 continue
 
-            if len(df) >= 2:
-                prev_close = df["Close"].iloc[-2]
-                latest_close = df["Close"].iloc[-1]
-            else:
-                prev_close = df["Open"].iloc[0]
-                latest_close = df["Close"].iloc[0]
-
-            change = ((latest_close - prev_close) / prev_close) * 100
+            # ✅ Recalculate % change manually
+            change_percent = ((price - prev_close) / prev_close) * 100
 
             results.append({
                 "symbol": sym,
-                "price": latest_close,
-                "change": change
+                "price": price,
+                "change": change_percent
             })
         except Exception as e:
-            st.warning(f"Error processing {sym}: {e}")
+            st.warning(f"Error fetching data for {sym}: {e}")
             continue
 
     return results
@@ -483,9 +473,12 @@ def get_latest_edgar_inline_url(cik):
 @st.cache_data(ttl=3600)
 def get_latest_press_release_metrics(company_name, ticker_symbol):
     import re
+    import requests
+    from bs4 import BeautifulSoup
 
     ticker = ticker_symbol.upper()
-    query = f'"{company_name}" earnings OR update OR "quarterly report"'
+    query = f'"{company_name}" earnings OR update OR quarter OR "quarterly report"'
+
     articles = get_news(
         query,
         page_size=10,
@@ -496,61 +489,105 @@ def get_latest_press_release_metrics(company_name, ticker_symbol):
 
     if not articles:
         print("❌ No articles returned by NewsAPI.")
-    else:
-        print(f"✅ Found {len(articles)} articles:")
-        for i, art in enumerate(articles):
-            print(f"{i+1}. {art.get('title')} — {art.get('source', {}).get('name')}")
+        return None
 
-    # (Optional) Temporarily skip the filter to inspect full list
-    article = articles[0]  # Force display of top result for testing
-
-    keywords = ["update", "quarter"]
     article = next(
-        (
-            a for a in articles
-            if (
-                ticker in (a.get("title", "") + a.get("description", "")).upper()
-                or company_name.upper() in (a.get("title", "") + a.get("description", "")).upper()
+    (
+        a for a in articles
+        if (
+            (ticker in (a.get("title", "") + a.get("description", "")).upper()
+             or company_name.upper() in (a.get("title", "") + a.get("description", "")).upper())
+            and any(
+                kw in (a.get("title", "") + a.get("description", "")).lower()
+                for kw in ["earnings", "update", "quarter", "quarterly report"]
             )
-        ),
-        None
-    )
+        )
+    ),
+    None
+)
 
     if not article:
+        print("❌ No matching article found in NewsAPI results.")
         return None
 
     title = article.get("title", "")
-    description = article.get("description", "")
-    content = f"{title} {description}".lower()
+    url = article.get("url", "")
     published_date = article.get("publishedAt", "")[:10]
-    url = article.get("url", "#")
 
+    # Fetch and parse full HTML page
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        paragraphs = soup.find_all("p")
+        tables = soup.find_all("table")
+
+        table_text = []
+        for table in tables:
+            for row in table.find_all("tr"):
+                cells = [cell.get_text(strip=True) for cell in row.find_all(["td", "th"])]
+                table_text.append(" ".join(cells))
+
+        full_text = " ".join(p.get_text() for p in paragraphs) + " " + " ".join(table_text)
+
+    except Exception as e:
+        print(f"⚠️ Error loading article HTML: {e}")
+        full_text = f"{title} {article.get('description', '')}"
+
+    content = full_text.lower()
     metrics = {}
 
+    # Patterns
     patterns = {
-        "Bitcoin Held": r"(?:held(?: a total of)?|holdings(?: total)?)[^\d]{0,20}([\d,]+)\s*(?:btc|bitcoin)|(?:btc|bitcoin)[^\d]{0,20}([\d,]+)",
+        "Bitcoin Held": r"(?:held(?: a total of)?|holdings(?: total)?)[^\d]{0,15}([\d,]+)\s*(?:btc|bitcoin)",
         "Revenue": r"revenue(?: (?:of|was))?[\s:]*\$([\d,\.]+)",
         "Cash & Equivalents": r"(?:cash and cash equivalents|cash)(?: (?:totaled|of))?[\s:]*\$([\d,\.]+)",
         "Earnings Per Share (Basic)": r"(?:earnings per share|eps)(?: \(basic\))?[\s:]*\$([\d\.]+)",
-        "Earnings Per Share (Diluted)": r"(?:earnings per share|eps)(?: \(diluted\))?[\s:]*\$([\d\.]+)"
+        "Earnings Per Share (Diluted)": r"(?:earnings per share|eps)(?: \(diluted\))?[\s:]*\$([\d\.]+)",
+        "EH/s": r"([\d\.]+)\s*(?:EH/s|exahash|exahashes)"
     }
 
-    for label, pattern in patterns.items():
-        matches = re.findall(pattern, content)
-
-        # Flatten all match groups and keep only digits/decimals
-        numbers = [g for pair in matches for g in pair if g.strip().replace(',', '').replace('.', '').isdigit()]
-
-        if numbers:
+    # Step 1: Extract EH/s first and redact the entire EH/s string from content
+    ehs_matches = re.findall(r"(([\d\.]+)\s*(EH/s|exahash|exahashes))", content)
+    if ehs_matches:
+        values = []
+        for full, number, unit in ehs_matches:
             try:
-                if "Bitcoin" in label:
-                    val = max(int(n.replace(",", "")) for n in numbers)
-                    metrics[label] = f"{val:,} BTC"
-                else:
-                    val = max(float(n.replace(",", "")) for n in numbers)
-                    metrics[label] = f"${val:,.2f}"
-            except ValueError:
+                val = float(number.replace(",", ""))
+                values.append(val)
+                content = content.replace(full, "")  # redact full match like "50 EH/s"
+            except:
                 continue
+        if values:
+            metrics["EH/s"] = f"{max(values):.2f} EH/s"
+
+    # Step 2: Extract everything else
+    for label, pattern in patterns.items():
+        if label == "EH/s":
+            continue  # Already handled
+
+        matches = re.findall(pattern, content)
+        if not matches:
+            continue
+
+        # Flatten based on type
+        if isinstance(matches[0], tuple):
+            numbers = [g for pair in matches for g in pair if g and g.strip().replace(',', '').replace('.', '').isdigit()]
+        else:
+            numbers = [g for g in matches if g and g.strip().replace(',', '').replace('.', '').isdigit()]
+
+        if not numbers:
+            continue
+
+        try:
+            if "Bitcoin" in label:
+                val = max(int(n.replace(",", "")) for n in numbers)
+                metrics[label] = f"{val:,} BTC"
+            else:
+                val = max(float(n.replace(",", "")) for n in numbers)
+                metrics[label] = f"${val:,.2f}"
+        except:
+            continue
 
     return {
         "title": title,
@@ -621,7 +658,33 @@ if tab == "Bitcoin News":
                 "24h Volume",
                 f"${btc_metrics.get('volume', 0):,.0f}"
             )
-        st.line_chart(data["Close"].round(2).rename("Bitcoin Price"))
+        btc_close = data["Close"].round(2).rename("Bitcoin Price").reset_index()
+        btc_close.columns = ["Date", "Price"]
+
+        btc_low = data["Low"].min()
+        btc_high = data["High"].max()
+
+        # Adjust y-axis padding based on selected range
+        if selected_range in ["1d","5d"]:
+            min_y = btc_low * .995
+            max_y = btc_high * 1.005
+        elif selected_range == "1mo":
+            min_y = btc_low * 0.985
+            max_y = btc_high * 1.015
+        else:  # "6mo", "1y", etc.
+            min_y = btc_low * 0.88
+            max_y = btc_high * 1.1
+
+        chart = alt.Chart(btc_close).mark_line().encode(
+            x="Date:T",
+            y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+        ).properties(
+            width="container",
+            height=400,
+            title="Bitcoin Price"
+        )
+
+        st.altair_chart(chart, use_container_width=True)
 
     col1, col2 = st.columns([1.8,2.2])
 
@@ -717,7 +780,6 @@ if tab == "Bitcoin News":
 if tab == "Live Market":
     btc_metrics = get_coingecko_btc_data()
     btc         = yf.Ticker("BTC-USD")
-    col1, col2  = st.columns([2,2])
     sym = st.session_state.get("stock_lookup_ticker", "MARA").strip().upper()
     ticker_obj = yf.Ticker(sym)
     try:
@@ -726,7 +788,7 @@ if tab == "Live Market":
     except Exception:
         company_name = sym
     # Stock
-    with col1:
+    with st.container():
         st.subheader(f"📊 Stock Market Lookup: {company_name}")        
         m1, m2 = st.columns([1.5, 2.5])
         with m1:
@@ -767,7 +829,8 @@ if tab == "Live Market":
         # ROW 2: Show current price on its own line
         price = info.get("regularMarketPrice")
         change_amount = info.get("regularMarketChange")
-        change_percent = info.get("regularMarketChangePercent")
+        prev_close = info.get("regularMarketPreviousClose")
+        change_percent = ((price - prev_close) / prev_close) * 100 if prev_close else None        
         clsk_price = clsk_open = clsk_high = clsk_low = None
         
         if sym != "CLSK":
@@ -811,7 +874,7 @@ if tab == "Live Market":
                 {delta_html}
             """
         with m1:
-            st.markdown(render_metric_block("Current Price", price, delta=change_amount, reference=price, show_arrow=True), unsafe_allow_html=True)
+            st.markdown(render_metric_block("Current Price", price, delta=change_amount, reference=prev_close, show_arrow=True), unsafe_allow_html=True)
 
         with m2:
             st.markdown(render_metric_block("CLSK Price", clsk_price), unsafe_allow_html=True)
@@ -832,7 +895,44 @@ if tab == "Live Market":
             def fmt_float(val): return f"{val:.2f}" if val is not None else "N/A"
             def fmt_millions(val): return f"{val/1_000_000:.2f} M" if val else "N/A"
             def fmt_billions(val): return f"{val/1_000_000_000:.2f} B" if val else "N/A"
+            st.markdown("<hr>", unsafe_allow_html=True)
+            try:
+                interval = "5m" if selected_range == "1d" else "1d"
+                df = ticker_obj.history(period=selected_range, interval=interval)
+                df.index = pd.to_datetime(df.index)
 
+                if not df.empty and "Close" in df.columns:
+                    stock_close = df["Close"].round(2).rename("Price").reset_index()
+                    stock_close.columns = ["Date", "Price"]
+
+                    # Calculate bounds based on Low/High
+                    stock_low = df["Low"].min()
+                    stock_high = df["High"].max()
+
+                    if selected_range in ["1d","5d"]:
+                        min_y = stock_low * .99
+                        max_y = stock_high * 1.01
+                    elif selected_range == "1mo":
+                        min_y = stock_low * 0.985
+                        max_y = stock_high * 1.05
+                    else:  # "6mo", "1y", etc.
+                        min_y = stock_low * 0.88
+                        max_y = stock_high * 1.05
+
+                    stock_chart = alt.Chart(stock_close).mark_line().encode(
+                        x="Date:T",
+                        y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+                    ).properties(
+                        width="container",
+                        height=400,
+                        title=f"{sym} Price"
+                    )
+
+                    st.altair_chart(stock_chart, use_container_width=True)
+                else:
+                    st.warning("No price data available for this range.")
+            except Exception as e:
+                st.error(f"Error loading chart data: {e}")
             m1, m2, m3 = st.columns(3)
             with m1:
                 st.markdown(f"**Open**: {fmt_float(info.get('open'))}")
@@ -846,121 +946,134 @@ if tab == "Live Market":
                 st.markdown(f"**Vol**: {fmt_millions(info.get('volume'))}")
                 st.markdown(f"**Avg Vol**: {fmt_millions(info.get('averageVolume'))}")
                 st.markdown(f"**Mkt Cap**: {fmt_billions(info.get('marketCap'))}")
-        try:
-            interval = "5m" if selected_range == "1d" else "1d"
-            df = ticker_obj.history(period=selected_range, interval=interval)
-            df.index = pd.to_datetime(df.index)
+        st.markdown("<hr>", unsafe_allow_html=True)
 
-            if not df.empty and "Close" in df.columns:
-                st.line_chart(df["Close"].round(2).rename(f"{sym} Price"))
+
+    st.subheader("Live Competiton View")
+    competitors = get_competitor_prices(competitor_tickers)
+
+    m1, m2, m3, m4, m5,m6 ,m7, m8= st.columns(8)
+    col_map = [m1, m2, m3, m4, m5, m6, m7, m8]
+
+    for i, comp in enumerate(competitors):
+        if i >= len(col_map):
+            break
+        with col_map[i]:
+            if comp["symbol"] == sym:
+                comp_price = price
+                comp_change = change_percent
             else:
-                st.warning("No price data available for this range.")
-        except Exception as e:
-            st.error(f"Error loading chart data: {e}")
+                comp_price = comp["price"]
+                comp_change = comp["change"]
 
-        with col2:
-            st.subheader("Live Competiton View")
-            competitors = get_competitor_prices(competitor_tickers)
+            arrow = "🔺" if comp_change >= 0 else "🔻"
+            color = "green" if comp_change >= 0 else "red"
+            st.markdown(
+                f"""
+                <div style='font-size:16px; text-align: center; padding: 8px 0;'>
+                    <strong>{comp['symbol']}</strong><br>
+                    ${comp_price:.2f}<br>
+                    <span style='color:{color};'>{arrow} {comp_change:.1f}%</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            m1, m2, m3, m4, m5 = st.columns(5)
-            col_map = [m1, m2, m3, m4, m5]
+    # --- Combined Filing & Press Metrics ---
+    st.markdown("### 📋 Competitor Financial Metrics Table")
+    st.write("Metrics pulled from SEC filings or recent press releases.")
+    
+    df_rows = []
 
-            for i, comp in enumerate(competitors):
-                if i >= len(col_map):
-                    break  # safety check if there are fewer than 5 columns defined
-                with col_map[i]:
-                    arrow = "🔺" if comp["change"] >= 0 else "🔻"
-                    color = "green" if comp["change"] >= 0 else "red"
-                    st.markdown(
-                        f"""
-                        <div style='font-size:16px; text-align: center; padding: 8px 0;'>
-                            <strong>{comp['symbol']}</strong><br>
-                            ${comp['price']:.2f}<br>
-                            <span style='color:{color};'>{arrow} {comp['change']:.2f}%</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+    for ticker in competitor_tickers:
+        cik = cik_map.get(ticker)
+        name = yf.Ticker(ticker).info.get("shortName", ticker)
+        row = {"Ticker": ticker, "Name": name}
+        sources_used = []
+        sec_data = {}
 
-            with col2:
-               # --- Combined Filing & Press Metrics ---
-                st.subheader("📊 Press Release & SEC Filing Metrics")
+        # Step 1: Check PRESS FIRST
+        press = get_latest_press_release_metrics(name, ticker)
+        if press and press.get("url"):
+            press_date = press.get("date")
+            press_url = press.get("url")
+            for label, val_str in press["metrics"].items():
+                try:
+                    val_clean = float(val_str.replace("$", "").replace(",", "").replace(" BTC", ""))
+                    sec_data[label] = val_clean
+                except:
+                    pass
+            sources_used.append(("Press", press_date, press_url))
 
-                ticker_upper = sym.upper()
-                company_name = info.get("longName") or ticker_upper
-                inline_url = get_latest_edgar_inline_url(cik)
-                
-                # Get latest SEC facts
-                facts = {}
-                dates = []
-                latest_accn = None
+        # Step 2: Fallback to single most recent SEC filing (only one accn)
+        fallback_tags = list(SEC_FACTS.values())
+        all_tags = [tag for tag_list in fallback_tags for tag in tag_list]
 
-                for label, tags in SEC_FACTS.items():
-                    val, end_date, accn = get_latest_sec_fact_with_fallback(cik, tags)
-                    if end_date:
-                        dates.append(end_date)
-                    if not latest_accn and accn:
-                        latest_accn = accn
-                    facts[label] = (val, end_date)
+        # Find the most recent available SEC filing used in any field
+        latest_accn = None
+        latest_date = None
+        latest_values = {}
 
-                # Get latest press release data
-                company_name = info.get("longName") or ticker_upper
-                press_data = get_latest_press_release_metrics(company_name, ticker_upper)
+        for label, tags in SEC_FACTS.items():
+            if label in sec_data:
+                continue  # Already filled by press
+            val, date, accn = get_latest_sec_fact_with_fallback(cik, tags)
+            if val is not None and accn is not None:
+                if not latest_accn or date > latest_date:
+                    latest_accn = accn
+                    latest_date = date
+                latest_values[label] = (val, accn)
 
-                # --- Combine them ---
-                combined_metrics = {}
+        # If a single SEC filing is available, pull all fallback fields from it only
+        if latest_accn:
+            accn_nodash = latest_accn.replace("-", "")
+            sec_url = get_latest_edgar_inline_url(cik)
+            for label, (val, accn) in latest_values.items():
+                if accn == latest_accn:
+                    sec_data[label] = val
+            sources_used.append(("SEC", latest_date, sec_url))
 
-                # SEC values
-                for label, (val, date) in facts.items():
-                    if val is not None:
-                        combined_metrics[label] = {
-                            "value": val,
-                            "source": "SEC Filing",
-                            "date": date
-                        }
+        # Fill row with final data
+        for label in SEC_FACTS.keys():
+            row[label] = sec_data.get(label, None)
 
-                # Press overrides SEC if newer
-                if press_data and press_data.get("metrics"):
-                    for label, val_str in press_data["metrics"].items():
-                        if label not in combined_metrics:
-                            combined_metrics[label] = {
-                                "value": val_str,
-                                "source": "Press Release",
-                                "date": press_data.get("date")
-                            }
-                        else:
-                            sec_date = combined_metrics[label]["date"]
-                            press_date = press_data.get("date")
-                            if press_date and (sec_date is None or press_date > sec_date):
-                                combined_metrics[label] = {
-                                    "value": val_str,
-                                    "source": "Press Release",
-                                    "date": press_date
-                                }
+        # Final links
+        if sources_used:
+            link_list = []
+            for source, date, url in sorted(sources_used, key=lambda x: x[1], reverse=True):
+                safe_url = quote(url, safe=':/?=&')
+                link_list.append(f'<a href="{safe_url}" target="_blank">{date} ({source})</a>')
+            row["Last Report"] = " • ".join(link_list)
+        else:
+            row["Last Report"] = "-"
 
-                # --- Display combined result ---
-                if not combined_metrics:
-                    st.info("No financial metrics available from SEC or press release.")
-                else:
-                    for label in sorted(combined_metrics.keys()):
-                        info = combined_metrics[label]
-                        val = info["value"]
-                        source = info["source"]
-                        date = info["date"]
-                        if source == "Press Release" and press_data and press_data.get("url"):
-                            formatted_date = f""" _(from {source}, {date}, <a href="{press_data['url']}" target="_blank">View Release</a>)_"""
-                        elif source == "SEC Filing" and inline_url:
-                            formatted_date = f""" _(from {source}, {date}, <a href="{inline_url}" target="_blank">View Filing</a>)_"""
-                        else:
-                            formatted_date = f" _(from {source}, {date})_" if date else f" _(from {source})_"
+        df_rows.append(row)
 
-                        # Format value
-                        if isinstance(val, (int, float)):
-                            if "Bitcoin" in label:
-                                val_display = f"{val:,.0f} BTC"
-                            else:
-                                val_display = f"${val:,.2f}"
-                        else:
-                            val_display = val
+    df = pd.DataFrame(df_rows)
+    df.set_index("Ticker", inplace=True)
 
-                        st.markdown(f"- **{label}**: {val_display}{formatted_date}", unsafe_allow_html=True)
+    for label in SEC_FACTS:
+        if label in df.columns:
+            if "Bitcoin" in label:
+                df[label] = df[label].apply(lambda x: f"{x:,.0f} BTC" if pd.notna(x) else "–")
+            elif "EH/s" in label:
+                df[label] = df[label].apply(lambda x: f"{x:,.2f} EH/s" if pd.notna(x) else "–")
+            else:
+                df[label] = df[label].apply(lambda x: f"${x:,.2f}" if pd.notna(x) else "–")
+                    
+    # Define formatting
+    def get_formatter(col):
+        if "Bitcoin" in col:
+            return "{:,.0f} BTC"
+        elif "EH/s" in col:
+            return "{:,.2f} EH/s"
+        else:
+            return "${:,.2f}"
+
+    formatters = {col: get_formatter(col) for col in SEC_FACTS.keys() if df[col].dtype in ['float64', 'int64']}
+
+    # Display table with custom formats and clickable date link
+    st.dataframe(df.drop(columns=["Last Report"]), use_container_width=True)
+    st.markdown("#### 🔗 Latest Report Links")
+    for idx, row in df.iterrows():
+        st.markdown(f"- **{idx}** ({row['Name']}): {row['Last Report']}", unsafe_allow_html=True)
