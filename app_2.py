@@ -987,12 +987,11 @@ if tab == "Live Market":
         df.index = pd.to_datetime(df.index)
         
         if lookup_range == "1 Day":
-        df.index = df.index.tz_localize("US/Eastern")
+            df.index = df.index.tz_localize("US/Eastern")
             
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
             df = df.dropna(subset=["Close"]).tail(5)
-
         
         if "regularMarketPrice" not in info or df.empty:
             st.warning(f"No data available for ticker `{sym}`.")
