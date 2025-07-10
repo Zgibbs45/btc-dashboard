@@ -988,10 +988,13 @@ if tab == "Live Market":
         if lookup_range == "1 Day":
             eastern = pytz.timezone("US/Eastern")
             now_et = datetime.now(eastern)
-            market_open = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+            today_open_et = eastern.localize(datetime(now_et.year, now_et.month, now_et.day, 9, 30))
         
-            df.index = df.index.tz_convert(eastern)  # make sure df index is Eastern
-            df = df[df.index >= market_open]
+            # Make sure index is timezone-aware
+            if df.index.tz is None:
+                df.index = df.index.tz_localize("UTC")
+        
+            df = df[df.index.tz_convert("US/Eastern") >= today_open_et]
         
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
@@ -1030,9 +1033,10 @@ if tab == "Live Market":
                     else:  # "6mo", "1y", etc.
                         min_y = stock_low * 0.88
                         max_y = stock_high * 1.05
-
+                    
+                    label_angle = 45 if selected_range == "1d" else 0
                     stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=0)),
+                        x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=label_angle)),
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
                     ).properties(
                         width="container",
@@ -1126,8 +1130,9 @@ if tab == "Live Market":
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Date"] = chart_df["Date"].dt.strftime("%b %d")
 
+        label_angle = 45 if selected_range == "1d" else 0
         line_chart = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=0)),
+            x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=label_angle)),
             y=alt.Y("Price:Q", title="Stock Price"),
             color="Ticker:N"
         ).properties(
