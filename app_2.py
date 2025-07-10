@@ -876,8 +876,11 @@ if tab == "Live Market":
 
         selected_range = range_options.get(lookup_range, "1mo")
 
-        # Fetch data
+        # Fetch data for selected ticker
         ticker_obj = yf.Ticker(sym)
+        interval = "5m" if selected_range == "1d" else "1d"
+        df = ticker_obj.history(period=selected_range, interval=interval)
+        df.index = pd.to_datetime(df.index)
 
         try:
             info = ticker_obj.get_info()
@@ -967,7 +970,6 @@ if tab == "Live Market":
             st.markdown("<hr>", unsafe_allow_html=True)
             try:
                 interval = "5m" if selected_range == "1d" else "1d"
-                df = ticker_obj.history(period=selected_range, interval=interval)
                 df.index = pd.to_datetime(df.index)
 
                 if not df.empty and "Close" in df.columns:
