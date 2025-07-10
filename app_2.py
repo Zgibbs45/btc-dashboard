@@ -1002,7 +1002,6 @@ if tab == "Live Market":
             st.markdown("<hr>", unsafe_allow_html=True)
             try:
                 interval = "5m" if selected_range == "1d" else "1d"
-                df.index = pd.to_datetime(df.index)
 
                 if not df.empty and "Close" in df.columns:
                     stock_close = df["Close"].round(2).rename("Price").reset_index()
@@ -1029,22 +1028,24 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        today = datetime.now().date()
+                        eastern = pytz.timezone("US/Eastern")
+                        today = datetime.now(eastern).date()
+                        
                         x_axis = alt.X(
                             "Date:T",
                             title="Time",
                             scale=alt.Scale(
                                 domain=[
-                                    pd.Timestamp(f"{today} 09:30").to_pydatetime(),
-                                    pd.Timestamp(f"{today} 16:00").to_pydatetime()
+                                    eastern.localize(datetime.combine(today, datetime.min.time().replace(hour=9, minute=30))),
+                                    eastern.localize(datetime.combine(today, datetime.min.time().replace(hour=16, minute=0)))
                                 ]
                             ),
                             axis=alt.Axis(
                                 labelAngle=45,
                                 format="%I:%M %p",
                                 values=[
-                                    pd.Timestamp(f"{today} {hour:02d}:00").to_pydatetime()
-                                    for hour in range(6, 17)
+                                    eastern.localize(datetime.combine(today, datetime.min.time().replace(hour=hour, minute=0)))
+                                    for hour in range(9, 17)
                                 ]
                             )
                         )
