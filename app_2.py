@@ -1035,7 +1035,7 @@ if tab == "Live Market":
                             title="Time",
                             scale=alt.Scale(
                                 domain=[
-                                    pd.Timestamp(f"{today} 06:00").to_pydatetime(),
+                                    pd.Timestamp(f"{today} 09:30").to_pydatetime(),
                                     pd.Timestamp(f"{today} 16:00").to_pydatetime()
                                 ]
                             ),
