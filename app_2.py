@@ -1018,7 +1018,7 @@ if tab == "Live Market":
                     stock_close = df["Close"].round(2).rename("Price").reset_index()
                     stock_close.columns = ["Date", "Price"]
                     if selected_range == "1d":
-                        stock_close["Date"] = pd.to_datetime(stock_close["Date"]).dt.strftime("%I:%M %p")  # e.g. 10:30 AM
+                        stock_close["Date"] = pd.to_datetime(stock_close["Date"])
                     else:
                         stock_close["Date"] = pd.to_datetime(stock_close["Date"]).dt.strftime("%b %d")  # e.g. Jul 10
                     # Calculate bounds based on Low/High
