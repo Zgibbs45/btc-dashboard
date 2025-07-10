@@ -987,14 +987,15 @@ if tab == "Live Market":
         df.index = pd.to_datetime(df.index)
         if lookup_range == "1 Day":
             eastern = pytz.timezone("US/Eastern")
-            now_et = datetime.now(eastern)
-            today_open_et = eastern.localize(datetime(now_et.year, now_et.month, now_et.day, 9, 30))
         
-            # Make sure index is timezone-aware
+            # 1) localize & convert all timestamps into US/Eastern
             if df.index.tz is None:
                 df.index = df.index.tz_localize("UTC")
+            df.index = df.index.tz_convert(eastern)
         
-            df = df[df.index.tz_convert("US/Eastern") >= today_open_et]
+            # 2) keep only rows whose Eastern‐date is today
+            today = datetime.now(eastern).date()
+            df = df[df.index.date == today]
         
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
