@@ -751,7 +751,7 @@ if tab == "Bitcoin News":
             max_y = btc_high * 1.1
 
         chart = alt.Chart(btc_close).mark_line().encode(
-            x=alt.X("Date:T", scale=alt.Scale(nice=False, domainMax=stock_close["Date"].max())),,
+            x="Date:T",
             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
         ).properties(
             width="container",
@@ -995,7 +995,7 @@ if tab == "Live Market":
                         max_y = stock_high * 1.05
 
                     stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x=alt.X("Date:T", scale=alt.Scale(nice=False, domainMax=chart_df["Date"].max())),
+                        x="Date:T",
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
                     ).properties(
                         width="container",
@@ -1232,4 +1232,3 @@ if tab == "Live Market":
     st.markdown("#### 🔗 Latest Report Links")
     for idx, row in df.iterrows():
         st.markdown(f"- **{idx}** ({row['Name']}): {row['Last Report']}", unsafe_allow_html=True)
-
