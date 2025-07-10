@@ -920,19 +920,6 @@ if tab == "Live Market":
             clsk_open  = clsk_info.get("open")
             clsk_high  = clsk_info.get("dayHigh")
             clsk_low   = clsk_info.get("dayLow")
-            except Exception:
-                clsk_info = {
-                    "regularMarketPrice": None,
-                    "open": None,
-                    "dayHigh": None,
-                    "dayLow": None
-                }
-                st.warning("⚠️ Could not fetch CLSK data. Displaying fallback values.")
-
-            clsk_price = clsk_info.get("regularMarketPrice")
-            clsk_open  = clsk_info.get("open")
-            clsk_high  = clsk_info.get("dayHigh")
-            clsk_low   = clsk_info.get("dayLow")
 
         # Layout: start with m1 already occupied by st.metric("Current Price")
         m1, m2, m3, m4, m5 = st.columns([1.4, 1.2, 1.2, 1.2, 1.2])
