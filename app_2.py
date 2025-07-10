@@ -987,10 +987,7 @@ if tab == "Live Market":
         df.index = pd.to_datetime(df.index)
         
         if lookup_range == "1 Day":
-            eastern = pytz.timezone("US/Eastern")
-            if df.index.tz is None:
-                df.index = df.index.tz_localize("UTC")
-            df.index = df.index.tz_convert(eastern)
+        df.index = df.index.tz_localize("US/Eastern")
             
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
@@ -1074,9 +1071,7 @@ if tab == "Live Market":
 
 
                     st.altair_chart(stock_chart, use_container_width=True)
-                    st.write("Last candle timestamp in Eastern Time:", df.index.max())
-                    st.write("Data preview:", stock_close.tail(10))
-
+                    
                 else:
                     st.warning("No price data available for this range.")
             except Exception as e:
