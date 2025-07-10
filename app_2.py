@@ -1075,6 +1075,7 @@ if tab == "Live Market":
 
                     st.altair_chart(stock_chart, use_container_width=True)
                     st.write("Last candle timestamp in Eastern Time:", df.index.max())
+                    st.write("Data preview:", stock_close.tail(10))
 
                 else:
                     st.warning("No price data available for this range.")
