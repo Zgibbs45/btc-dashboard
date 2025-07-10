@@ -898,6 +898,7 @@ if tab == "Live Market":
             market_range_options = {k: v for k, v in range_options.items() if k != "1 Week"}
             lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), default="1 Day", key="lookup_range")
             selected_range = market_range_options.get(lookup_range, "1mo")
+            extended_range = "10d" if lookup_range == "5 Days" else selected_range
 
         # Fetch data for selected ticker
         ticker_obj = yf.Ticker(sym)
@@ -981,8 +982,13 @@ if tab == "Live Market":
             st.markdown(render_metric_block("CLSK Low", clsk_low), unsafe_allow_html=True)
         
         interval = "5m" if selected_range == "1d" else "1d"
-        df = ticker_obj.history(period=selected_range, interval=interval)
+        df = ticker_obj.history(period=extended_range, interval=interval)
         df.index = pd.to_datetime(df.index)
+        
+        # Limit to 5 most recent valid market days (skip holidays/weekends)
+        if lookup_range == "5 Days":
+            df = df.dropna(subset=["Close"]).tail(5)
+
         
         if "regularMarketPrice" not in info or df.empty:
             st.warning(f"No data available for ticker `{sym}`.")
