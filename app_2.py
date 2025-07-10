@@ -1104,31 +1104,55 @@ if tab == "Live Market":
     else:
         st.info("No data available for selected tickers/time range.")
 
+   
     # --- Combined Filing & Press Metrics ---
     st.markdown("### 📋 Competitor Financial Metrics Table")
     st.write("Metrics pulled from SEC filings or recent press releases.")
     
-    df_rows = []
+    # Dynamically determine available filing quarters
+    available_quarters = get_available_filing_quarters(competitor_tickers)
 
+    # Build dynamic options list
+    pill_options = ["Current Metrics"] + available_quarters
+    quarter = st.pills("Select View:", pill_options, default=pill_options[0], key="quarter_selector")
+
+
+    is_current_metrics = (quarter == "Current Metrics")
+
+    if is_current_metrics:
+        start_date = end_date = None  # no filtering, show latest
+    else:
+        start_date, end_date = get_quarter_date_bounds(quarter)
+
+    st.caption(f"Data shown for: **{quarter} {datetime.now().year}** {'(live)' if is_current_metrics else '(locked)'}")
+
+    df_rows = []
+    
     for ticker in competitor_tickers:
         cik = cik_map.get(ticker)
         name = yf.Ticker(ticker).info.get("shortName", ticker)
         row = {"Ticker": ticker, "Name": name}
         sources_used = []
         sec_data = {}
+        if is_current_metrics:
+            start_date = end_date = None  # allow full data access
+        else:
+            start_date, end_date = get_quarter_date_bounds(quarter)
 
-        # Step 1: Check PRESS FIRST
-        press = get_latest_press_release_metrics(name, ticker)
-        if press and press.get("url"):
-            press_date = press.get("date")
-            press_url = press.get("url")
-            for label, val_str in press["metrics"].items():
-                try:
-                    val_clean = float(val_str.replace("$", "").replace(",", "").replace(" BTC", ""))
-                    sec_data[label] = val_clean
-                except:
-                    pass
-            sources_used.append(("Press", press_date, press_url))
+
+        # Step 1: PRESS — only for "Current Metrics"
+        if is_current_metrics:
+            press = get_latest_press_release_metrics(name, ticker)
+            if press and press.get("url"):
+                press_date = press.get("date")
+                press_url = press.get("url")
+                for label, val_str in press["metrics"].items():
+                    try:
+                        val_clean = float(val_str.replace("$", "").replace(",", "").replace(" BTC", ""))
+                        sec_data[label] = val_clean
+                    except:
+                        pass
+                sources_used.append(("Press", press_date, press_url))
 
         # Step 2: Fallback to single most recent SEC filing (only one accn)
         fallback_tags = list(SEC_FACTS.values())
@@ -1142,7 +1166,9 @@ if tab == "Live Market":
         for label, tags in SEC_FACTS.items():
             if label in sec_data:
                 continue  # Already filled by press
-            val, date, accn = get_latest_sec_fact_with_fallback(cik, tags)
+            val, date, accn = get_latest_sec_fact_with_fallback(
+                cik, tags, start_date=start_date, end_date=end_date
+            )
             if val is not None and accn is not None:
                 if not latest_accn or date > latest_date:
                     latest_accn = accn
@@ -1162,7 +1188,7 @@ if tab == "Live Market":
         for label in SEC_FACTS.keys():
             row[label] = sec_data.get(label, None)
 
-         # Final links
+        # Final links
         if sources_used:
             link_list = []
             for source, date, url in sorted(sources_used, key=lambda x: x[1], reverse=True):
@@ -1204,3 +1230,4 @@ if tab == "Live Market":
     st.markdown("#### 🔗 Latest Report Links")
     for idx, row in df.iterrows():
         st.markdown(f"- **{idx}** ({row['Name']}): {row['Last Report']}", unsafe_allow_html=True)
+
