@@ -1022,7 +1022,7 @@ if tab == "Live Market":
                         max_y = stock_high * 1.05
 
                     stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=90))
+                        x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=90)),
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
                     ).properties(
                         width="container",
@@ -1117,7 +1117,7 @@ if tab == "Live Market":
         chart_df["Date"] = chart_df["Date"].dt.strftime("%b %d")
 
         line_chart = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=90))
+            x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=90)),
             y=alt.Y("Price:Q", title="Stock Price"),
             color="Ticker:N"
         ).properties(
