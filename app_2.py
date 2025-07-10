@@ -1035,15 +1035,18 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        x_axis = alt.X(
-                            "Date:T",
-                            title="Date",
-                            axis=alt.Axis(
-                                labelAngle=45,
-                                format="%I:%M %p",           # 12-hour clock: 01:00 PM
-                                tickMinStep=60 * 60 * 1000   # 1 hour in milliseconds
-                            )
+                    x_axis = alt.X(
+                        "Date:T",
+                        title="Time",
+                        axis=alt.Axis(
+                            labelAngle=45,
+                            format="%I:%M %p",
+                            values=[
+                                pd.Timestamp(f"{datetime.now().date()} {hour:02d}:00").to_pydatetime()
+                                for hour in range(6, 17)  # 6 AM to 4 PM
+                            ]
                         )
+                    )
                     else:
                         x_axis = alt.X(
                             "Date:T",
