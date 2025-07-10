@@ -1166,6 +1166,8 @@ if tab == "Live Market":
         for label, tags in SEC_FACTS.items():
             if label in sec_data:
                 continue  # Already filled by press
+            if not cik:
+                continue  # Skip if no CIK available for this ticker
             val, date, accn = get_latest_sec_fact_with_fallback(
                 cik, tags, start_date=start_date, end_date=end_date
             )
