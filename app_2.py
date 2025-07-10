@@ -895,11 +895,6 @@ if tab == "Live Market":
                 "marketCap": None
             }
             st.warning(f"⚠️ Could not fetch company info for ticker: `{sym}`. Displaying fallback values.")
-        try:
-            df = ticker_obj.history(period=selected_range, interval="1d")
-        except Exception:
-            df = None
-            st.warning(f"⚠️ No historical data found for `{sym}`.")
 
         # ROW 2: Show current price on its own line
         price = info.get("regularMarketPrice")
