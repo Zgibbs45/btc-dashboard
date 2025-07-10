@@ -1050,9 +1050,7 @@ if tab == "Live Market":
                 """,
                 unsafe_allow_html=True
             )
-            
-    st.markdown("### 📈 Multi-Ticker Comparison Chart")
-
+    # Live Competition View Chart
     # New range selector just for this chart
     comp_range = st.pills(
         "Select Time Range:",
