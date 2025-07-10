@@ -905,9 +905,21 @@ if tab == "Live Market":
         
         if sym != "CLSK":
             clsk = yf.Ticker("CLSK")
-            df = ticker_obj.history(period=selected_range, interval="1d")
             try:
                 clsk_info = clsk.get_info()
+            except Exception:
+                clsk_info = {
+                    "regularMarketPrice": None,
+                    "open": None,
+                    "dayHigh": None,
+                    "dayLow": None
+                }
+                st.warning("⚠️ Could not fetch CLSK data. Displaying fallback values.")
+        
+            clsk_price = clsk_info.get("regularMarketPrice")
+            clsk_open  = clsk_info.get("open")
+            clsk_high  = clsk_info.get("dayHigh")
+            clsk_low   = clsk_info.get("dayLow")
             except Exception:
                 clsk_info = {
                     "regularMarketPrice": None,
