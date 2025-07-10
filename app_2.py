@@ -8,6 +8,7 @@ import time
 import re
 import html
 import altair as alt
+import pytz
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
 from datetime import datetime, timedelta
@@ -985,7 +986,11 @@ if tab == "Live Market":
         df = ticker_obj.history(period=extended_range, interval=interval)
         df.index = pd.to_datetime(df.index)
         if lookup_range == "1 Day":
-            market_open = datetime.now().replace(hour=9, minute=30, second=0, microsecond=0)
+            eastern = pytz.timezone("US/Eastern")
+            now_et = datetime.now(eastern)
+            market_open = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+        
+            df.index = df.index.tz_convert(eastern)  # make sure df index is Eastern
             df = df[df.index >= market_open]
         
         # Limit to 5 most recent valid market days (skip holidays/weekends)
