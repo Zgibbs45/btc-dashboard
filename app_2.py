@@ -994,9 +994,9 @@ if tab == "Live Market":
             df.index = df.index.tz_convert(eastern)
         
             # 2) keep only rows whose Eastern‐date is today
-            today = datetime.now(eastern).date()
-            df = df[df.index.date == today]
-        
+            now = datetime.now(eastern)
+            market_open = now.replace(hour=4, minute=0, second=0, microsecond=0)
+            df = df[df.index >= market_open]
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
             df = df.dropna(subset=["Close"]).tail(5)
