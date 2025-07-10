@@ -754,9 +754,8 @@ if tab == "Bitcoin News":
             x="Date:T",
             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
         ).properties(
-            width="container",
+            width=500,
             height=400,
-            title="Bitcoin Price"
         )
 
         st.altair_chart(chart, use_container_width=True)
