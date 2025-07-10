@@ -140,7 +140,7 @@ range_options = {
     "1 Day": "1d", "1 Week": "5d", "1 Month": "1mo", "6 Months": "6mo", "1 Year": "1y"
 }
 
-competitor_tickers = ["CLSK", "BITF", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "MTPLF", "RIOT", "WULF"]
+competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "MTPLF", "RIOT", "WULF"]
 
 # --- Helper Functions ---
 
@@ -883,7 +883,7 @@ if tab == "Live Market":
         st.subheader(f"📊 Stock Market Lookup: {company_name}")        
         m1, m2 = st.columns([1.5, 2.5])
         with m1:
-            sym = st.text_input("Stock ticker:", "MARA", key="stock_lookup_ticker").strip().upper()
+            sym = st.text_input("Stock ticker:", "CLSK", key="stock_lookup_ticker").strip().upper()
             cik = cik_map.get(sym.upper())
             entered_ticker = sym.upper()
         
@@ -1040,8 +1040,8 @@ if tab == "Live Market":
     st.subheader("Live Competiton View")
     competitors = get_competitor_prices(competitor_tickers)
 
-    m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12= st.columns(12)
-    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11,m12]
+    m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12, m13= st.columns(13)
+    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11,m12, m13]
 
     for i, comp in enumerate(competitors):
         if i >= len(col_map):
