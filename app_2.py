@@ -1036,18 +1036,14 @@ if tab == "Live Market":
                         max_y = stock_high * 1.05
                     
                     label_angle = 45 if selected_range == "1d" else 0
-                    stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x=x_axis,
-                        y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
-                    )
-                       if selected_range == "1d":
+                    if selected_range == "1d":
                         x_axis = alt.X(
                             "Date:T",
                             title="Date",
                             axis=alt.Axis(
                                 labelAngle=45,
-                                format="%I:%M %p",
-                                tickMinStep=3600000  # 1 hour for intraday
+                                format="%I:%M %p",           # 12-hour clock: 01:00 PM
+                                tickMinStep=60 * 60 * 1000   # 1 hour in milliseconds
                             )
                         )
                     else:
@@ -1056,15 +1052,19 @@ if tab == "Live Market":
                             title="Date",
                             axis=alt.Axis(
                                 labelAngle=0,
-                                format="%b %d"  # e.g., Jul 10
+                                format="%b %d"               # Short date: Jul 11, Aug 15
                             )
                         )
+                    
+                    stock_chart = alt.Chart(stock_close).mark_line().encode(
+                        x=x_axis,
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
                     ).properties(
                         width="container",
                         height=400,
                         title=f"{sym} Price"
                     )
+
 
                     st.altair_chart(stock_chart, use_container_width=True)
                 else:
