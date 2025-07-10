@@ -985,18 +985,13 @@ if tab == "Live Market":
         interval = "5m" if selected_range == "1d" else "1d"
         df = ticker_obj.history(period=extended_range, interval=interval)
         df.index = pd.to_datetime(df.index)
-        if lookup_range == "1 Day":
-            eastern = pytz.timezone("US/Eastern")
         
-            # 1) localize & convert all timestamps into US/Eastern
-            if df.index.tz is None:
-                df.index = df.index.tz_localize("UTC")
-            df.index = df.index.tz_convert(eastern)
-        
-            # 2) keep only rows whose Eastern‐date is today
-            now = datetime.now(eastern)
-            market_open = now.replace(hour=4, minute=0, second=0, microsecond=0)
-            df = df[df.index >= market_open]
+       if lookup_range == "1 Day":
+        eastern = pytz.timezone("US/Eastern")
+        if df.index.tz is None:
+            df.index = df.index.tz_localize("UTC")
+        df.index = df.index.tz_convert(eastern)
+            
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
             df = df.dropna(subset=["Close"]).tail(5)
