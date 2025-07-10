@@ -986,11 +986,11 @@ if tab == "Live Market":
         df = ticker_obj.history(period=extended_range, interval=interval)
         df.index = pd.to_datetime(df.index)
         
-       if lookup_range == "1 Day":
-        eastern = pytz.timezone("US/Eastern")
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC")
-        df.index = df.index.tz_convert(eastern)
+        if lookup_range == "1 Day":
+            eastern = pytz.timezone("US/Eastern")
+            if df.index.tz is None:
+                df.index = df.index.tz_localize("UTC")
+            df.index = df.index.tz_convert(eastern)
             
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
