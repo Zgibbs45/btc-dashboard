@@ -1054,7 +1054,7 @@ if tab == "Live Market":
                 unsafe_allow_html=True
             )
             
- st.markdown("### 📈 Multi-Ticker Comparison Chart")
+    st.markdown("### 📈 Multi-Ticker Comparison Chart")
 
     # New range selector just for this chart
     comp_range = st.pills(
@@ -1081,7 +1081,7 @@ if tab == "Live Market":
                 combined_df = df
             else:
                 combined_df = combined_df.join(df, how="outer")
-      
+            
     # Build chart
     if combined_df is not None and not combined_df.empty:
         chart_df = combined_df.reset_index()
