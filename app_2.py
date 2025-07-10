@@ -729,8 +729,9 @@ if tab == "Bitcoin News":
     btc = yf.Ticker("BTC-USD")
 
     st.subheader("📈 Bitcoin Market Stats")
-    sel = st.pills("Bitcoin price range:", options=list(range_options.keys()), default="1 Day", key="btc_range")
-    selected_range = range_options.get(sel, "1mo")
+    btc_range_options = {k: v for k, v in range_options.items() if k != "1 Week"}
+    sel = st.pills("Bitcoin price range:", options=list(btc_range_options.keys()), default="1 Day", key="btc_range")
+    selected_range = btc_range_options.get(sel, "1mo")
     data = get_history(btc, selected_range)
 
     if not data.empty:
