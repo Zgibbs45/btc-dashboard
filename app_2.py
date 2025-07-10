@@ -751,7 +751,7 @@ if tab == "Bitcoin News":
             max_y = btc_high * 1.1
 
         chart = alt.Chart(btc_close).mark_line().encode(
-            x="Date:T",
+            x=alt.X("Date:T", scale=alt.Scale(nice=False)),
             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
         ).properties(
             width="container",
@@ -995,7 +995,7 @@ if tab == "Live Market":
                         max_y = stock_high * 1.05
 
                     stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x="Date:T",
+                        x=alt.X("Date:T", scale=alt.Scale(nice=False)),
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
                     ).properties(
                         width="container",
