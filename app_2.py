@@ -518,7 +518,24 @@ def get_available_filing_quarters(tickers, year=None):
             continue
 
     return sorted(list(found_quarters))
-    
+
+@st.cache_data(ttl=3600)
+def get_quarter_date_bounds(quarter, year=None):
+    """Returns the start and end datetime for a given quarter and year."""
+    if year is None:
+        year = datetime.now().year
+
+    if quarter == "Q1":
+        return datetime(year, 1, 1), datetime(year, 3, 31, 23, 59, 59)
+    elif quarter == "Q2":
+        return datetime(year, 4, 1), datetime(year, 6, 30, 23, 59, 59)
+    elif quarter == "Q3":
+        return datetime(year, 7, 1), datetime(year, 9, 30, 23, 59, 59)
+    elif quarter == "Q4":
+        return datetime(year, 10, 1), datetime(year, 12, 31, 23, 59, 59)
+    else:
+        raise ValueError(f"Unknown quarter: {quarter}")
+
 @st.cache_data(ttl=86400)
 def get_latest_edgar_inline_url(cik):
     cik_clean = str(int(cik)).zfill(10)
@@ -754,7 +771,7 @@ if tab == "Bitcoin News":
             x="Date:T",
             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
         ).properties(
-            width=500,
+            width="container",
             height=400,
         )
 
