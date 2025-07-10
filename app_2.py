@@ -750,9 +750,15 @@ if tab == "Bitcoin News":
                 "24h Volume",
                 f"${btc_metrics.get('volume', 0):,.0f}"
             )
+            
         btc_close = data["Close"].round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
-
+        
+        # 🚫 Filter out weekends for "1 Week" range
+        if sel == "1 Week":
+            btc_close["Date"] = pd.to_datetime(btc_close["Date"])
+            btc_close = btc_close[btc_close["Date"].dt.weekday < 5]
+            
         btc_low = data["Low"].min()
         btc_high = data["High"].max()
 
