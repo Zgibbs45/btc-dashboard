@@ -987,7 +987,10 @@ if tab == "Live Market":
         df.index = pd.to_datetime(df.index)
         
         if lookup_range == "1 Day":
-            df.index = df.index.tz_localize("US/Eastern")
+            if df.index.tz is None:
+                df.index = df.index.tz_localize("US/Eastern")
+            else:
+                df.index = df.index.tz_convert("US/Eastern")
             
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
