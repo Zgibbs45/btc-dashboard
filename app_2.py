@@ -878,10 +878,7 @@ if tab == "Live Market":
 
         # Fetch data for selected ticker
         ticker_obj = yf.Ticker(sym)
-        interval = "5m" if selected_range == "1d" else "1d"
-        df = ticker_obj.history(period=selected_range, interval=interval)
-        df.index = pd.to_datetime(df.index)
-
+    
         try:
             info = ticker_obj.get_info()
         except Exception:
@@ -959,7 +956,11 @@ if tab == "Live Market":
 
         with m5:
             st.markdown(render_metric_block("CLSK Low", clsk_low), unsafe_allow_html=True)
-
+        
+        interval = "5m" if selected_range == "1d" else "1d"
+        df = ticker_obj.history(period=selected_range, interval=interval)
+        df.index = pd.to_datetime(df.index)
+        
         if "regularMarketPrice" not in info or df.empty:
             st.warning(f"No data available for ticker `{sym}`.")
         else:
