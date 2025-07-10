@@ -751,17 +751,16 @@ if tab == "Bitcoin News":
                 f"${btc_metrics.get('volume', 0):,.0f}"
             )
             
-        btc_close = data["Close"].round(2).rename("Bitcoin Price").reset_index()
+        btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
         
-        # 🚫 Filter out weekends for "1 Week" range
         if sel == "1 Week":
-            btc_close["Date"] = pd.to_datetime(btc_close["Date"])
-            btc_close = btc_close[btc_close["Date"].dt.weekday < 5]
-            
-        btc_low = data["Low"].min()
-        btc_high = data["High"].max()
-
+            # ✅ Keep only the last 5 valid trading days (skip weekends/holidays automatically)
+            btc_close = btc_close.tail(5)
+        
+        btc_low = btc_close["Price"].min()
+        btc_high = btc_close["Price"].max()
+        
         # Adjust y-axis padding based on selected range
         if selected_range in ["1d","5d"]:
             min_y = btc_low * .995
@@ -772,15 +771,16 @@ if tab == "Bitcoin News":
         else:  # "6mo", "1y", etc.
             min_y = btc_low * 0.88
             max_y = btc_high * 1.1
-
+        
         chart = alt.Chart(btc_close).mark_line().encode(
             x="Date:T",
             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
         ).properties(
             width="container",
             height=400,
+            title="Bitcoin Price"
         )
-
+        
         st.altair_chart(chart, use_container_width=True)
 
     col1, col2 = st.columns([1.8,2.2])
