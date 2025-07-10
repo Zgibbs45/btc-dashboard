@@ -1037,7 +1037,7 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=label_angle)),
+                        x=alt.X("Date:T", title="Date", axis=alt.Axis(labelAngle=label_angle)),
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
                     ).properties(
                         width="container",
