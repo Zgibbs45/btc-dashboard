@@ -1005,6 +1005,7 @@ if tab == "Live Market":
                 if not df.empty and "Close" in df.columns:
                     stock_close = df["Close"].round(2).rename("Price").reset_index()
                     stock_close.columns = ["Date", "Price"]
+                    stock_close["Date"] = pd.to_datetime(stock_close["Date"]).dt.strftime("%b %d")
 
                     # Calculate bounds based on Low/High
                     stock_low = df["Low"].min()
