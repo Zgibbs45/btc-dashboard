@@ -1043,7 +1043,7 @@ if tab == "Live Market":
                         axis=alt.Axis(
                             labelAngle=label_angle,
                             format="%I:%M %p",
-                            tickMinStep=30 * 60 * 2000 
+                            tickMinStep=60 * 60 * 1000 
                         )
                     ),
                         y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
