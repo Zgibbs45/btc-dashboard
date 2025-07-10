@@ -390,7 +390,7 @@ def fetch_comp_price_series(ticker, period):
         return None
 
 @st.cache_data(ttl=900)
-def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_duration=90, tolerance=10):
+def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_duration=90, tolerance=10, start_date=None, end_date=None):
     if cik is None:
         return None, None, None
     cik_clean = str(int(cik)).zfill(10)
