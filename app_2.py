@@ -755,8 +755,7 @@ if tab == "Bitcoin News":
         btc_close.columns = ["Date", "Price"]
         
         if sel == "1 Week":
-            # ✅ Keep only the last 5 valid trading days (skip weekends/holidays automatically)
-            btc_close = btc_close.tail(5)
+            btc_close = btc_close.tail(7)
         
         btc_low = btc_close["Price"].min()
         btc_high = btc_close["Price"].max()
