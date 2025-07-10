@@ -1240,6 +1240,6 @@ if tab == "Live Market":
 
     # Display table with custom formats and clickable date link
     st.dataframe(df.drop(columns=["Last Report"]), use_container_width=True)
-    st.markdown("#### 🔗 Latest Report Links")
+    st.markdown("#### 🔗 Filing Report Links")
     for idx, row in df.iterrows():
         st.markdown(f"- **{idx}** ({row['Name']}): {row['Last Report']}", unsafe_allow_html=True)
