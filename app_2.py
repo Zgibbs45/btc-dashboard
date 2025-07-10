@@ -12,6 +12,7 @@ from pycoingecko import CoinGeckoAPI
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
+from dateutil.parser import parse as parse_date
 from datetime import timezone
 from urllib.parse import quote
 
@@ -370,6 +371,24 @@ def get_competitor_prices(symbols):
 
     return results
 
+@st.cache_data(ttl=600)
+def fetch_comp_price_series(ticker, period):
+    try:
+        if period == "1d":
+            interval = "5m"
+        elif period == "5d":
+            interval = "30m"
+        else:
+            interval = "1d"
+
+        df = yf.Ticker(ticker).history(period=period, interval=interval)
+        df = df[["Close"]].rename(columns={"Close": ticker})
+        df.index = pd.to_datetime(df.index)
+        return df
+    except Exception as e:
+        st.warning(f"Error fetching {ticker}: {e}")
+        return None
+
 @st.cache_data(ttl=900)
 def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_duration=90, tolerance=10):
     if cik is None:
@@ -446,6 +465,60 @@ def load_cik_map():
 
 cik_map = load_cik_map()
 
+@st.cache_data(ttl=3600)
+def get_available_filing_quarters(tickers, year=None):
+    if year is None:
+        year = datetime.now().year
+
+    headers = {"User-Agent": "CleanSpark Dashboard <zgibbs@cleanspark.com>"}
+
+    def infer_quarter_from_date(date_str):
+        try:
+            dt = parse_date(date_str)
+            if dt.year != year:
+                return None
+            month = dt.month
+            if 1 <= month <= 3:
+                return "Q1"
+            elif 4 <= month <= 6:
+                return "Q2"
+            elif 7 <= month <= 9:
+                return "Q3"
+            elif 10 <= month <= 12:
+                return "Q4"
+        except:
+            return None
+
+    found_quarters = set()
+
+    for ticker in tickers:
+        cik = cik_map.get(ticker)
+        if not cik:
+            continue
+        cik_clean = str(int(cik)).zfill(10)
+
+        # Use a reliable financial tag (like revenue) to extract report periods
+        url = f"https://data.sec.gov/api/xbrl/companyconcept/CIK{cik_clean}/us-gaap/Revenues.json"
+        try:
+            resp = requests.get(url, headers=headers)
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            units = data.get("units", {})
+            for unit_values in units.values():
+                for v in unit_values:
+                    end = v.get("end")
+                    if not end:
+                        continue
+                    q = infer_quarter_from_date(end)
+                    if q:
+                        found_quarters.add(q)
+        except Exception as e:
+            print(f"[SEC QUARTERS] Error for {ticker}: {e}")
+            continue
+
+    return sorted(list(found_quarters))
+    
 @st.cache_data(ttl=86400)
 def get_latest_edgar_inline_url(cik):
     cik_clean = str(int(cik)).zfill(10)
@@ -980,6 +1053,56 @@ if tab == "Live Market":
                 """,
                 unsafe_allow_html=True
             )
+            
+ st.markdown("### 📈 Multi-Ticker Comparison Chart")
+
+    # New range selector just for this chart
+    comp_range = st.pills(
+        "Select Time Range:",
+        options=list(range_options.keys()),
+        default="1 Day",
+        key="comp_chart_range"
+    )
+    comp_selected_period = range_options.get(comp_range, "1mo")
+
+    # Ticker selector
+    comp_selected_tickers = st.multiselect(
+        "Select companies to compare:",
+        options=competitor_tickers,
+        default=["CLSK", "MARA"],
+        key="comp_chart_tickers"
+    )
+
+    combined_df = None
+    for ticker in comp_selected_tickers:
+        df = fetch_comp_price_series(ticker, comp_selected_period)
+        if df is not None and not df.empty:
+            if combined_df is None:
+                combined_df = df
+            else:
+                combined_df = combined_df.join(df, how="outer")
+      
+    # Build chart
+    if combined_df is not None and not combined_df.empty:
+        chart_df = combined_df.reset_index()
+        chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
+        chart_df["Date"] = pd.to_datetime(chart_df["Date"]).dt.tz_localize(None)
+        chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
+        chart_df.dropna(subset=["Price"], inplace=True)
+
+        line_chart = alt.Chart(chart_df).mark_line().encode(
+            x="Date:T",
+            y=alt.Y("Price:Q", title="Stock Price"),
+            color="Ticker:N"
+        ).properties(
+            width="container",
+            height=400,
+            title="Stock Price Comparison"
+        )
+
+        st.altair_chart(line_chart, use_container_width=True)
+    else:
+        st.info("No data available for selected tickers/time range.")
 
     # --- Combined Filing & Press Metrics ---
     st.markdown("### 📋 Competitor Financial Metrics Table")
