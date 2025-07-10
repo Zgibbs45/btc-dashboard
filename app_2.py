@@ -895,9 +895,9 @@ if tab == "Live Market":
             entered_ticker = sym.upper()
         
         with m2:
-            lookup_range = st.pills("Timeframe:", options=list(range_options.keys()), default="1 Day", key="lookup_range")
-
-        selected_range = range_options.get(lookup_range, "1mo")
+            market_range_options = {k: v for k, v in range_options.items() if k != "1 Week"}
+            lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), default="1 Day", key="lookup_range")
+            selected_range = market_range_options.get(lookup_range, "1mo")
 
         # Fetch data for selected ticker
         ticker_obj = yf.Ticker(sym)
