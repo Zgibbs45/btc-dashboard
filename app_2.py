@@ -1044,7 +1044,7 @@ if tab == "Live Market":
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
                         stock_close.columns = ["Date", "Price"]
                         
-                         x_axis = alt.X(
+                        x_axis = alt.X(
                             "Date:T",
                             title="Time (ET)",
                             axis=alt.Axis(
