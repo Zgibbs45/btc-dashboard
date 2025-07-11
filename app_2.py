@@ -377,8 +377,6 @@ def fetch_comp_price_series(ticker, period):
     try:
         if period == "1d":
             interval = "5m"
-        elif period == "5d":
-            interval = "30m"
         else:
             interval = "1d"
 
