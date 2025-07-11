@@ -1064,9 +1064,15 @@ if tab == "Live Market":
                             )
                         )
                     
-                    stock_chart = alt.Chart(stock_close).mark_line().encode(
-                        x=x_axis,
-                        y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+                    stock_chart = alt.layer(
+                        alt.Chart(stock_close).mark_line().encode(
+                            x=x_axis,
+                            y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+                        ),
+                        alt.Chart(stock_close).mark_circle(size=40).encode(
+                            x=x_axis,
+                            y="Price:Q"
+                        )
                     ).properties(
                         width="container",
                         height=400,
