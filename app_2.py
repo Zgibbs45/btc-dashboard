@@ -1160,13 +1160,31 @@ if tab == "Live Market":
         chart_df["Date"] = pd.to_datetime(chart_df["Date"]).dt.tz_localize(None)
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
         chart_df.dropna(subset=["Price"], inplace=True)
-        chart_df["Date"] = chart_df["Date"].dt.strftime("%b %d")
+        label_angle = 45 if comp_selected_period == "1d" else 0
 
-        label_angle = 45 if selected_range == "1d" else 0
+        # Optional: convert to Eastern time and filter intraday
+        from pytz import timezone as tz
+        eastern = tz("US/Eastern")
+        
+        if comp_selected_period == "1d":
+            chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC").dt.tz_convert(eastern)
+            chart_df = chart_df[chart_df["Date"].dt.time.between(datetime.strptime("09:30", "%H:%M").time(),
+                                                                  datetime.strptime("16:00", "%H:%M").time())]
+        
+        min_y = chart_df["Price"].min() * 0.99
+        max_y = chart_df["Price"].max() * 1.01
+        
         line_chart = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X("Date:N", title="Date", axis=alt.Axis(labelAngle=label_angle)),
-            y=alt.Y("Price:Q", title="Stock Price"),
+            x=alt.X("Date:T", title="Time" if comp_selected_period == "1d" else "Date",
+                    axis=alt.Axis(labelAngle=label_angle,
+                                  format="%H:%M" if comp_selected_period == "1d" else "%b %d")),
+            y=alt.Y("Price:Q", title="Stock Price", scale=alt.Scale(domain=[min_y, max_y])),
             color="Ticker:N"
+        ).properties(
+            width="container",
+            height=400,
+            title="Stock Price Comparison"
+    
         ).properties(
             width="container",
             height=400,
