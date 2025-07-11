@@ -1028,25 +1028,26 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        eastern = pytz.timezone("US/Eastern")
-                        today = datetime.now(eastern).date()
+                        today = datetime.now().astimezone(pytz.timezone("US/Eastern")).date()
+
+                        domain = [
+                            datetime.combine(today, datetime.min.time().replace(hour=9, minute=30)),
+                            datetime.combine(today, datetime.min.time().replace(hour=16, minute=0))
+                        ]
+                        
+                        tick_values = [
+                            datetime.combine(today, datetime.min.time().replace(hour=hour))
+                            for hour in range(9, 17)
+                        ]
                         
                         x_axis = alt.X(
                             "Date:T",
                             title="Time",
-                            scale=alt.Scale(
-                                domain=[
-                                    eastern.localize(datetime.combine(today, datetime.min.time().replace(hour=9, minute=30))),
-                                    eastern.localize(datetime.combine(today, datetime.min.time().replace(hour=16, minute=0)))
-                                ]
-                            ),
+                            scale=alt.Scale(domain=domain),
                             axis=alt.Axis(
                                 labelAngle=45,
                                 format="%I:%M %p",
-                                values=[
-                                    eastern.localize(datetime.combine(today, datetime.min.time().replace(hour=hour, minute=0)))
-                                    for hour in range(9, 17)
-                                ]
+                                values=tick_values
                             )
                         )
                     else:
