@@ -1031,29 +1031,35 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        today = datetime.now().date()
+                        from pytz import timezone as tz
+                        eastern = tz("US/Eastern")
+                    
+                        # Convert index to eastern time
+                        df.index = df.index.tz_localize("UTC").tz_convert(eastern)
+                        df = df.between_time("09:30", "16:00")  # intraday only
+                    
+                        stock_close = df["Close"].round(2).rename("Price").reset_index()
+                        stock_close.columns = ["Date", "Price"]
+                    
                         x_axis = alt.X(
                             "Date:T",
                             title="Time",
-                            scale=alt.Scale(
-                                domain=[
-                                    pd.Timestamp(f"{today} 09:30").to_pydatetime(),
-                                    pd.Timestamp(f"{today} 16:00").to_pydatetime()
-                                ]
-                            ),
                             axis=alt.Axis(
                                 labelAngle=45,
-                                format="%I:%M %p",
-                                values=[pd.Timestamp(f"{today} {hour:02d}:00").to_pydatetime() for hour in range(6, 17)]
+                                format="%I:%M %p"
                             )
                         )
                     else:
+                        stock_close = df["Close"].round(2).rename("Price").reset_index()
+                        stock_close.columns = ["Date", "Price"]
+                        stock_close["Date"] = stock_close["Date"].dt.strftime("%b %d")
+                    
                         x_axis = alt.X(
                             "Date:T",
                             title="Date",
                             axis=alt.Axis(
                                 labelAngle=0,
-                                format="%b %d"               # Short date: Jul 11, Aug 15
+                                format="%b %d"
                             )
                         )
                     
@@ -1065,7 +1071,6 @@ if tab == "Live Market":
                         height=400,
                         title=f"{sym} Price"
                     )
-
 
                     st.altair_chart(stock_chart, use_container_width=True)
                     
