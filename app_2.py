@@ -9,6 +9,7 @@ import re
 import html
 import altair as alt
 import pytz
+import math
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
 from datetime import datetime, timedelta
@@ -1177,13 +1178,18 @@ if tab == "Live Market":
         
         min_y = chart_df["Price"].min() * 0.99
         max_y = chart_df["Price"].max() * 1.01
-        
+        # Protect against NaN in price range
+        if math.isnan(min_y) or math.isnan(max_y):
+            st.warning("One or more selected tickers have missing price data.")
+            y_scale = alt.Scale()  # fallback to auto-scaling
+        else:
+            y_scale = alt.Scale(domain=[min_y, max_y])
         line_chart = alt.layer(
             alt.Chart(chart_df).mark_line().encode(
                 x=alt.X("Date:T", title="Time" if comp_selected_period == "1d" else "Date",
                         axis=alt.Axis(labelAngle=label_angle,
                                       format="%H:%M" if comp_selected_period == "1d" else "%b %d")),
-                y=alt.Y("Price:Q", title="Stock Price", scale=alt.Scale(domain=[min_y, max_y])),
+                y=alt.Y("Price:Q", scale=y_scale),
                 color="Ticker:N"
             ),
             alt.Chart(chart_df).mark_circle(size=40).encode(  # 👈 add points
