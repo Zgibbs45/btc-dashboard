@@ -8,8 +8,7 @@ import time
 import re
 import html
 import altair as alt
-import pytz
-import math
+from zoneinfo import ZoneInfo
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
 from datetime import datetime, timedelta
@@ -1029,16 +1028,10 @@ if tab == "Live Market":
                         max_y = stock_high * 1.05
                     
                     label_angle = 45 if selected_range == "1d" else 0
-                    if selected_range == "1d":
-                        from pytz import timezone as tz
-                        eastern = tz("US/Eastern")
-                        
-                        # Ensure index is in Eastern Time safely
-                        if df.index.tz is None:
-                            df.index = df.index.tz_localize("UTC").tz_convert(eastern)
-                        else:
-                            df.index = df.index.tz_convert(eastern)
-                        df = df.between_time("09:30", "16:00")  # intraday only
+                    if df.index.tz is None:
+                        df.index = df.index.tz_localize("UTC")
+                    
+                    df.index = df.index.tz_convert(ZoneInfo("US/Eastern"))
                     
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
                         stock_close.columns = ["Date", "Price"]
