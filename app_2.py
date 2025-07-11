@@ -990,7 +990,10 @@ if tab == "Live Market":
             
         # Limit to 5 most recent valid market days (skip holidays/weekends)
         if lookup_range == "5 Days":
-            df = df.dropna(subset=["Close"]).tail(5)
+            df = df.dropna(subset=["Close"])
+            df["DateOnly"] = df.index.date
+            recent_days = sorted(df["DateOnly"].unique())[-5:]  # Get last 5 trading days
+            df = df[df["DateOnly"].isin(recent_days)]
         
         if "regularMarketPrice" not in info or df.empty:
             st.warning(f"No data available for ticker `{sym}`.")
@@ -1028,26 +1031,20 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        today = datetime.now().astimezone(pytz.timezone("US/Eastern")).date()
-
-                        domain = [
-                            datetime.combine(today, datetime.min.time().replace(hour=6, minute=30)),
-                            datetime.combine(today, datetime.min.time().replace(hour=13, minute=0))
-                        ]
-                        
-                        tick_values = [
-                            datetime.combine(today, datetime.min.time().replace(hour=hour))
-                            for hour in range(9, 17)
-                        ]
-                        
+                        today = datetime.now().date()
                         x_axis = alt.X(
                             "Date:T",
                             title="Time",
-                            scale=alt.Scale(domain=domain),
+                            scale=alt.Scale(
+                                domain=[
+                                    pd.Timestamp(f"{today} 09:30").to_pydatetime(),
+                                    pd.Timestamp(f"{today} 16:00").to_pydatetime()
+                                ]
+                            ),
                             axis=alt.Axis(
                                 labelAngle=45,
                                 format="%I:%M %p",
-                                values=tick_values
+                                values=[pd.Timestamp(f"{today} {hour:02d}:00").to_pydatetime() for hour in range(6, 17)]
                             )
                         )
                     else:
