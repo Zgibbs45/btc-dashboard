@@ -1172,23 +1172,25 @@ if tab == "Live Market":
         min_y = chart_df["Price"].min() * 0.99
         max_y = chart_df["Price"].max() * 1.01
         
-        line_chart = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X("Date:T", title="Time" if comp_selected_period == "1d" else "Date",
-                    axis=alt.Axis(labelAngle=label_angle,
-                                  format="%H:%M" if comp_selected_period == "1d" else "%b %d")),
-            y=alt.Y("Price:Q", title="Stock Price", scale=alt.Scale(domain=[min_y, max_y])),
-            color="Ticker:N"
-        ).properties(
-            width="container",
-            height=400,
-            title="Stock Price Comparison"
-    
+        line_chart = alt.layer(
+            alt.Chart(chart_df).mark_line().encode(
+                x=alt.X("Date:T", title="Time" if comp_selected_period == "1d" else "Date",
+                        axis=alt.Axis(labelAngle=label_angle,
+                                      format="%H:%M" if comp_selected_period == "1d" else "%b %d")),
+                y=alt.Y("Price:Q", title="Stock Price", scale=alt.Scale(domain=[min_y, max_y])),
+                color="Ticker:N"
+            ),
+            alt.Chart(chart_df).mark_circle(size=40).encode(  # 👈 add points
+                x="Date:T",
+                y="Price:Q",
+                color="Ticker:N"
+            )
         ).properties(
             width="container",
             height=400,
             title="Stock Price Comparison"
         )
-
+            
         st.altair_chart(line_chart, use_container_width=True)
     else:
         st.info("No data available for selected tickers/time range.")
