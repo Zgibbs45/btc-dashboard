@@ -1046,7 +1046,7 @@ if tab == "Live Market":
                         
                         x_axis = alt.X(
                             "Date:T",
-                            title="Time (ET)",
+                            title="Time (PT)",
                             axis=alt.Axis(
                                 labelAngle=45,
                                 format="%H:%M"
