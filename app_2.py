@@ -1044,15 +1044,12 @@ if tab == "Live Market":
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
                         stock_close.columns = ["Date", "Price"]
                     
-                        unique_dates = stock_close["Date"].unique().tolist()
-
                         x_axis = alt.X(
                             "Date:T",
                             title="Date",
                             axis=alt.Axis(
                                 labelAngle=0,
-                                format="%b %d",
-                                values=unique_dates  # only show actual dates from your data
+                                format="%b %d"
                             )
                         )
                     else:
