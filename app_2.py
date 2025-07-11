@@ -1033,9 +1033,12 @@ if tab == "Live Market":
                     if selected_range == "1d":
                         from pytz import timezone as tz
                         eastern = tz("US/Eastern")
-                    
-                        # Convert index to eastern time
-                        df.index = df.index.tz_localize("UTC").tz_convert(eastern)
+                        
+                        # Ensure index is in Eastern Time safely
+                        if df.index.tz is None:
+                            df.index = df.index.tz_localize("UTC").tz_convert(eastern)
+                        else:
+                            df.index = df.index.tz_convert(eastern)
                         df = df.between_time("09:30", "16:00")  # intraday only
                     
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
