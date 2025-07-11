@@ -1043,13 +1043,13 @@ if tab == "Live Market":
                     
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
                         stock_close.columns = ["Date", "Price"]
-                    
-                        x_axis = alt.X(
+                        
+                         x_axis = alt.X(
                             "Date:T",
-                            title="Date",
+                            title="Time (ET)",
                             axis=alt.Axis(
-                                labelAngle=0,
-                                format="%b %d"
+                                labelAngle=45,
+                                format="%H:%M"
                             )
                         )
                     else:
