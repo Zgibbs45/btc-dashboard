@@ -1031,8 +1031,8 @@ if tab == "Live Market":
                         today = datetime.now().astimezone(pytz.timezone("US/Eastern")).date()
 
                         domain = [
-                            datetime.combine(today, datetime.min.time().replace(hour=9, minute=30)),
-                            datetime.combine(today, datetime.min.time().replace(hour=16, minute=0))
+                            datetime.combine(today, datetime.min.time().replace(hour=6, minute=30)),
+                            datetime.combine(today, datetime.min.time().replace(hour=13, minute=0))
                         ]
                         
                         tick_values = [
