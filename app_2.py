@@ -815,11 +815,45 @@ if tab == "Bitcoin News":
             final_text = escaped_text.replace("\n", "<br>")
 
             with st.container():
-                st.markdown(f"**[{tweet['name']}](https://twitter.com/{tweet['username']})** • @{tweet['username']} • *{format_timestamp(tweet['created_at'])}*")
-                st.markdown(final_text, unsafe_allow_html=True)
-                st.markdown(f"🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}")
-                st.markdown(f"[View on Twitter](https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']})")
-        
+                # --- Step 1: Clean tweet text (preserve $/# without linking) ---
+                raw_text = translate_text(tweet["text"], GOOGLE_API_KEY)
+            
+                # Escape only dangerous HTML chars; keep $ and # intact
+                safe_text = (
+                    raw_text.replace("&", "&amp;")
+                            .replace("<", "&lt;")
+                            .replace(">", "&gt;")
+                )
+            
+                # Highlight $TICKER and #hashtags with span styling
+                highlighted = re.sub(r"(\$\w+)", r'<span style="color:#1DA1F2; font-weight:600;">\1</span>', safe_text)
+                highlighted = re.sub(r"(#\w+)", r'<span style="color:#1DA1F2;">\1</span>', highlighted)
+            
+                # Replace line breaks with <br>
+                formatted_text = highlighted.replace("\n", "<br>")
+            
+                # --- Step 2: Tweet layout ---
+                st.markdown(
+                    f"""
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <img src="{tweet['profile_img']}" style="width:40px; height:40px; border-radius:50%;">
+                        <div>
+                            <span style="font-weight:600;">{tweet['name']}</span>
+                            <span style="color:gray;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</span>
+                            <div style="margin-top:4px; line-height:1.5;">{formatted_text}</div>
+                            <div style="color:gray; font-size:14px; margin-top:8px;">
+                                🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}
+                            </div>
+                            <div style="margin-top:4px;">
+                                <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:14px;">View on Twitter</a>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            
+                # --- Optional Media Preview ---
                 for url in tweet["media"]:
                     if url.lower().endswith((".jpg", ".png", ".jpeg")):
                         st.image(url, use_container_width=True)
@@ -827,8 +861,9 @@ if tab == "Bitcoin News":
                         st.video(url)
                     else:
                         st.markdown(f"[View Media]({url})")
-        
-                st.markdown("<hr style='margin: 1rem 0; border: 3.5px solid #D5EDF8;'>", unsafe_allow_html=True)
+            
+                st.markdown("<hr style='margin: 1rem 0; border: 2px solid #eee;'>", unsafe_allow_html=True)
+
                     
     # General News
     with col2:
