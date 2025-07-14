@@ -260,7 +260,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     headers = {"Authorization": f"Bearer {st.secrets["TWITTER_BEARER_TOKEN"]}"}
 
     if query_scope == "CleanSpark":
-        query = '("CleanSpark" OR #CLSK) -is:retweet has:links'
+        query = '("CleanSpark" OR #CLSK or $CLSK) -is:retweet has:links'
     else:
         query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet has:links'
 
