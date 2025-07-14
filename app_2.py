@@ -269,7 +269,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
         "query": query,
-        "max_results": 20,
+        "max_results": 50,
         "tweet.fields": "public_metrics,created_at,author_id,entities",
         "start_time": from_date,
         "expansions": "attachments.media_keys,author_id",
