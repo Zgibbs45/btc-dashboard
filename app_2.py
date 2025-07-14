@@ -297,12 +297,14 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     today = datetime.now(timezone.utc).date()
     
     if max_age_days > 1:
-        tweets = [
-            t for t in tweets
-            if "created_at" in t
-            and parse_date(t["created_at"]).date() != today
-            and parse_date(t["created_at"]) >= cutoff
-        ]
+        filtered = []
+        for t in tweets:
+            if "created_at" not in t:
+                continue
+            dt = parse_date(t["created_at"])
+            if dt >= cutoff and dt.date() != today:
+                filtered.append(t)
+        tweets = filtered
     else:
         tweets = [
             t for t in tweets
