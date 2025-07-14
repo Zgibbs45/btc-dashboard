@@ -793,7 +793,8 @@ if tab == "Bitcoin News":
         m1, m2 = st.columns([1, 1])
 
         with m1:
-            tw_days = st.pills("Tweets from the past...", ["1 Day", "3 Days", "1 Week"], default="1 Day", key="tw_days")
+            tw_days = st.session_state.get("tw_days", "1 Day")
+            st.pills("Tweets from the past...", ["1 Day", "3 Days", "1 Week"], default=tw_days, key="tw_days")
 
         with m2:
             tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets", "Published"], default="Likes", key="tw_sort")
