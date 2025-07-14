@@ -817,7 +817,7 @@ if tab == "Bitcoin News":
                 text = text.replace("&", "<<<AMP>>>")  # temporary placeholder
                 text = html.escape(text)
                 return text.replace("<<<AMP>>>", "&")
-            final_text = custom_escape(clean_text).replace("\n", "<br>")
+            final_text = clean_text.replace("\n", "<br>")
             
             with st.container():
                 st.markdown(
