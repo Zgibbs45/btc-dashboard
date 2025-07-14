@@ -813,10 +813,10 @@ if tab == "Bitcoin News":
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
             clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
             
-        def custom_escape(text):
-            text = text.replace("&", "<<<AMP>>>")  # temporary placeholder
-            text = html.escape(text)
-            return text.replace("<<<AMP>>>", "&")
+            def custom_escape(text):
+                text = text.replace("&", "<<<AMP>>>")  # temporary placeholder
+                text = html.escape(text)
+                return text.replace("<<<AMP>>>", "&")
             final_text = html.escape(clean_text).replace("\n", "<br>")      
             
             with st.container():
