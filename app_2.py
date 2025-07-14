@@ -340,7 +340,12 @@ def translate_text(text, api_key, target="en"):
         return resp.json()["data"]["translations"][0]["translatedText"]
     except Exception as e:
         return text  # fallback to original
-    
+
+def custom_escape(text):
+    text = text.replace("&", "<<<AMP>>>")  # temporary placeholder
+    text = html.escape(text)
+    return text.replace("<<<AMP>>>", "&")
+
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
     results = []
