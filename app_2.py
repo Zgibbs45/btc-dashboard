@@ -810,33 +810,42 @@ if tab == "Bitcoin News":
         )
         
         for tweet in tweets:
-            # 1. Translate the tweet
+            # 1. Translate tweet
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
         
-            # 2. Escape all HTML-sensitive characters (except $/#)
+            # 2. Escape all HTML-sensitive characters
             escaped = html.escape(translated_text)
         
-            # 3. Style $TICKERS and #hashtags
+            # 3. Highlight $TICKERS and #hashtags with blue span (no links)
             styled = re.sub(r'\$(\w+)', r'<span style="color:#1DA1F2; font-weight:600;">$\1</span>', escaped)
             styled = re.sub(r'#(\w+)', r'<span style="color:#1DA1F2;">#\1</span>', styled)
         
-            # 4. Replace line breaks with <br>
+            # 4. Restore line breaks
             final_text = styled.replace("\n", "<br>")
         
-            # 5. Display
+            # 5. Render tweet
             with st.container():
                 st.markdown(
                     f"""
-                    <div style="font-size:15px; line-height:1.5;">
-                        <strong>{tweet['name']}</strong> • @{tweet['username']} • <em>{format_timestamp(tweet['created_at'])}</em><br>
-                        {final_text}<br>
-                        🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}<br>
-                        <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank">View on Twitter</a>
+                    <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 1rem;">
+                        <img src="{tweet['profile_img']}" style="width: 48px; height: 48px; border-radius: 50%;">
+                        <div>
+                            <div style="font-weight: 600;">{tweet['name']}</div>
+                            <div style="color: gray; font-size: 13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
+                            <div style="margin-top: 6px; font-size: 15px; line-height: 1.5;">{final_text}</div>
+                            <div style="color: gray; font-size: 13px; margin-top: 6px;">
+                                🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}
+                            </div>
+                            <div style="margin-top: 6px;">
+                                <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank" style="color: #1DA1F2; font-size: 13px;">View on Twitter</a>
+                            </div>
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
         
+                # Media handling
                 for url in tweet["media"]:
                     if url.lower().endswith((".jpg", ".png", ".jpeg")):
                         st.image(url, use_container_width=True)
