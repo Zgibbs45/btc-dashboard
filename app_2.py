@@ -811,6 +811,7 @@ if tab == "Bitcoin News":
         
         for tweet in tweets:
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
+            clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
             final_text = html.escape(translated_text).replace("\n", "<br>")        
             with st.container():
                 st.markdown(
