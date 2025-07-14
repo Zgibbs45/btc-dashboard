@@ -815,55 +815,29 @@ if tab == "Bitcoin News":
             final_text = escaped_text.replace("\n", "<br>")
 
             with st.container():
-                # --- Step 1: Clean tweet text (preserve $/# without linking) ---
+                # Step 1: Translate
                 raw_text = translate_text(tweet["text"], GOOGLE_API_KEY)
-            
-                # Escape only dangerous HTML chars; keep $ and # intact
-                safe_text = (
-                    raw_text.replace("&", "&amp;")
-                            .replace("<", "&lt;")
-                            .replace(">", "&gt;")
+                
+                # Step 2: Highlight $TICKERS and #hashtags BEFORE escaping
+                styled = re.sub(r"(\$\w+)", r'<span style="color:#1DA1F2; font-weight:600;">\1</span>', raw_text)
+                styled = re.sub(r"(#\w+)", r'<span style="color:#1DA1F2;">\1</span>', styled)
+                
+                # Step 3: Escape everything else (except tags)
+                styled_safe = styled.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                
+                # Step 4: Re-enable the span tags (manually unescape just those)
+                styled_safe = styled_safe.replace(
+                    '&lt;span style="color:#1DA1F2; font-weight:600;"&gt;',
+                    '<span style="color:#1DA1F2; font-weight:600;">'
+                ).replace(
+                    '&lt;span style="color:#1DA1F2;"&gt;',
+                    '<span style="color:#1DA1F2;">'
+                ).replace(
+                    '&lt;/span&gt;', '</span>'
                 )
-            
-                # Highlight $TICKER and #hashtags with span styling
-                highlighted = re.sub(r"(\$\w+)", r'<span style="color:#1DA1F2; font-weight:600;">\1</span>', safe_text)
-                highlighted = re.sub(r"(#\w+)", r'<span style="color:#1DA1F2;">\1</span>', highlighted)
-            
-                # Replace line breaks with <br>
-                formatted_text = highlighted.replace("\n", "<br>")
-            
-                # --- Step 2: Tweet layout ---
-                st.markdown(
-                    f"""
-                    <div style="display:flex; align-items:flex-start; gap:12px;">
-                        <img src="{tweet['profile_img']}" style="width:40px; height:40px; border-radius:50%;">
-                        <div>
-                            <span style="font-weight:600;">{tweet['name']}</span>
-                            <span style="color:gray;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</span>
-                            <div style="margin-top:4px; line-height:1.5;">{formatted_text}</div>
-                            <div style="color:gray; font-size:14px; margin-top:8px;">
-                                🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}
-                            </div>
-                            <div style="margin-top:4px;">
-                                <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:14px;">View on Twitter</a>
-                            </div>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            
-                # --- Optional Media Preview ---
-                for url in tweet["media"]:
-                    if url.lower().endswith((".jpg", ".png", ".jpeg")):
-                        st.image(url, use_container_width=True)
-                    elif url.lower().endswith((".mp4", ".mov", ".webm")):
-                        st.video(url)
-                    else:
-                        st.markdown(f"[View Media]({url})")
-            
-                st.markdown("<hr style='margin: 1rem 0; border: 2px solid #eee;'>", unsafe_allow_html=True)
-
+                
+                # Step 5: Format line breaks
+                final_text = styled_safe.replace("\n", "<br>")
                     
     # General News
     with col2:
