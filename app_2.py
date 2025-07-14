@@ -810,20 +810,8 @@ if tab == "Bitcoin News":
         )
         
         for tweet in tweets:
-            # 1. Translate tweet
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
-        
-            # 2. Escape all HTML-sensitive characters
-            escaped = html.escape(translated_text)
-        
-            # 3. Highlight $TICKERS and #hashtags with blue span (no links)
-            styled = re.sub(r'\$(\w+)', r'<span style="color:#1DA1F2; font-weight:600;">$\1</span>', escaped)
-            styled = re.sub(r'#(\w+)', r'<span style="color:#1DA1F2;">#\1</span>', styled)
-        
-            # 4. Restore line breaks
-            final_text = styled.replace("\n", "<br>")
-        
-            # 5. Render tweet
+            final_text = html.escape(translated_text).replace("\n", "<br>")        
             with st.container():
                 st.markdown(
                     f"""
