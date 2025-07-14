@@ -793,14 +793,14 @@ if tab == "Bitcoin News":
         m1, m2 = st.columns([1, 1])
 
         with m1:
-            tw_days = st.pills("Tweets from the past...", ["1 Day", "3 Days", "1 Week"], default="1 Day", key="tw_days")
-
-        with m2:
-            tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets", "Published"], default="Likes", key="tw_sort")
-            
-        tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
+            tw_days_selected = st.pills("Tweets from the past...", ["1 Day", "3 Days", "1 Week"], default="1 Day", key="tw_days")
+        
         tw_days_map = {"1 Day": 1, "3 Days": 3, "1 Week": 7}
-        tw_max_days = tw_days_map[tw_days]
+        
+        # Extract selected value from the list
+        tw_days_value = tw_days_selected[0] if tw_days_selected else "1 Day"
+        
+        tw_max_days = tw_days_map[tw_days_value]
 
         tweets = get_cleanspark_tweets(
             query_scope=tw_scope_val,
