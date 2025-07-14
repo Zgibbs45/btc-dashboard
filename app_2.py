@@ -800,7 +800,7 @@ if tab == "Bitcoin News":
             
         tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
         tw_days_map = {"1 Day": 1, "3 Days": 3, "1 Week": 7}
-        tw_max_days = tw_days_map[tw_days[0]] if tw_days else 1
+        tw_max_days = tw_days_map[tw_days]
 
         tweets = get_cleanspark_tweets(
             query_scope=tw_scope_val,
