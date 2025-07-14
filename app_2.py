@@ -293,7 +293,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     data = response.json()
     tweets = data.get("data", [])
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    cutoff = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=max_age_days)
     today = datetime.now(timezone.utc).date()
     
     if max_age_days > 1:
