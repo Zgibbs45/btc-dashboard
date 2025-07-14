@@ -7,8 +7,8 @@ import os
 import time
 import re
 import html
-import altair as alt
 import pytz
+import altair as alt
 import math
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
@@ -1204,6 +1204,8 @@ if tab == "Live Market":
         chart_df["Date"] = pd.to_datetime(chart_df["Date"]).dt.tz_localize(None)
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
         chart_df.dropna(subset=["Price"], inplace=True)
+        chart_df["Price"] = chart_df["Price"].round(2)
+
         label_angle = 45 if comp_selected_period == "1d" else 0
         
         if comp_selected_period == "1d":
