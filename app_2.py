@@ -812,7 +812,7 @@ if tab == "Bitcoin News":
             query_scope=tw_scope_val,
             max_age_days=tw_max_days,
             sort_by=tw_sort.lower(),  # lowercase for consistency
-            max_results=6
+            max_results=15
         )
         
         for tweet in tweets:
