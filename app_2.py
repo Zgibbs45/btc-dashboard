@@ -810,34 +810,42 @@ if tab == "Bitcoin News":
         )
         
         for tweet in tweets:
+            # 1. Translate the tweet
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
-            escaped_text = translated_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            final_text = escaped_text.replace("\n", "<br>")
-
+        
+            # 2. Escape all HTML-sensitive characters (except $/#)
+            escaped = html.escape(translated_text)
+        
+            # 3. Style $TICKERS and #hashtags
+            styled = re.sub(r'\$(\w+)', r'<span style="color:#1DA1F2; font-weight:600;">$\1</span>', escaped)
+            styled = re.sub(r'#(\w+)', r'<span style="color:#1DA1F2;">#\1</span>', styled)
+        
+            # 4. Replace line breaks with <br>
+            final_text = styled.replace("\n", "<br>")
+        
+            # 5. Display
             with st.container():
-                # Step 1: Translate
-                raw_text = translate_text(tweet["text"], GOOGLE_API_KEY)
-                
-                # Step 2: Highlight $TICKERS and #hashtags BEFORE escaping
-                styled = re.sub(r"(\$\w+)", r'<span style="color:#1DA1F2; font-weight:600;">\1</span>', raw_text)
-                styled = re.sub(r"(#\w+)", r'<span style="color:#1DA1F2;">\1</span>', styled)
-                
-                # Step 3: Escape everything else (except tags)
-                styled_safe = styled.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                
-                # Step 4: Re-enable the span tags (manually unescape just those)
-                styled_safe = styled_safe.replace(
-                    '&lt;span style="color:#1DA1F2; font-weight:600;"&gt;',
-                    '<span style="color:#1DA1F2; font-weight:600;">'
-                ).replace(
-                    '&lt;span style="color:#1DA1F2;"&gt;',
-                    '<span style="color:#1DA1F2;">'
-                ).replace(
-                    '&lt;/span&gt;', '</span>'
+                st.markdown(
+                    f"""
+                    <div style="font-size:15px; line-height:1.5;">
+                        <strong>{tweet['name']}</strong> • @{tweet['username']} • <em>{format_timestamp(tweet['created_at'])}</em><br>
+                        {final_text}<br>
+                        🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}<br>
+                        <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank">View on Twitter</a>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
                 )
-                
-                # Step 5: Format line breaks
-                final_text = styled_safe.replace("\n", "<br>")
+        
+                for url in tweet["media"]:
+                    if url.lower().endswith((".jpg", ".png", ".jpeg")):
+                        st.image(url, use_container_width=True)
+                    elif url.lower().endswith((".mp4", ".mov", ".webm")):
+                        st.video(url)
+                    else:
+                        st.markdown(f"[View Media]({url})")
+        
+                st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
                     
     # General News
     with col2:
