@@ -292,9 +292,14 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
 
     data = response.json()
     tweets = data.get("data", [])
+    
+    # ✅ NEW: filter by cutoff date
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    tweets = [t for t in tweets if "created_at" in t and parse_date(t["created_at"]) >= cutoff]
+    
     users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
     media_map = {m["media_key"]: m for m in data.get("includes", {}).get("media", [])}
-
+    
     # Build full tweet results
     results = []
     for tweet in tweets:
