@@ -1200,11 +1200,11 @@ if tab == "Live Market":
 
         # Format time for tooltip
         if comp_selected_period == "1d":
-            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%H:%M %p"),
+            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%H:%M %p")
             time_title = "Time (PST)"
         else:
-            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%b %d"),
-            time_title = "Date"
+            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%b %d")
+            date_title = "Date"
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = chart_df["Price"].round(2)
