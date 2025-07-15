@@ -1077,30 +1077,22 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        eastern = ZoneInfo("US/Eastern")
+                        stock_close = df["Close"].round(2).rename("Price").reset_index()
+                        stock_close.columns = ["Date", "Price"]
                     
-                        stock_close = df["Close"].round(2).rename("Price").reset_index()
-                        stock_close.columns = ["Date", "Price"]
-                        
-                        x_axis = alt.X(
-                            "Date:T",
-                            title="Time (ET)",
-                            axis=alt.Axis(
-                                labelAngle=45,
-                                format="%H:%M"
-                            )
-                        )
-                    else:
-                        stock_close = df["Close"].round(2).rename("Price").reset_index()
-                        stock_close.columns = ["Date", "Price"]
-                        stock_close["Date"] = stock_close["Date"].dt.strftime("%b %d")
+                        # Convert to Pacific Time
+                        stock_close["Date"] = pd.to_datetime(stock_close["Date"])
+                        if stock_close["Date"].dt.tz is None:
+                            stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
+                        stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Pacific")
+                        stock_close["TimePST"] = stock_close["Date"].dt.strftime("%H:%M %p")
                     
                         x_axis = alt.X(
                             "Date:T",
                             title="Time (PST)",
                             axis=alt.Axis(labelAngle=45, format="%H:%M")
                         )
-                        
+                    
                         stock_chart = alt.layer(
                             alt.Chart(stock_close).mark_line().encode(
                                 x=x_axis,
