@@ -1241,7 +1241,7 @@ if tab == "Live Market":
                 y=alt.Y("Price:Q", scale=y_scale),
                 color="Ticker:N",
                 tooltip=[
-                    alt.Tooltip("Date:T", title="Time", format="%H:%M" if comp_selected_period == "1d" else "%b %d"),
+                    alt.Tooltip("TimeFormatted:N", title="Time"),
                     alt.Tooltip("Price:Q", format=".2f"),
                     alt.Tooltip("Ticker:N")
                 ]
@@ -1256,7 +1256,10 @@ if tab == "Live Market":
             height=400,
             title="Stock Price Comparison"
         )
-    
+        if comp_selected_period == "1d":
+            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
+        else:
+            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%b %d")
         st.altair_chart(line_chart, use_container_width=True)
     else:
         st.info("No data available for selected tickers/time range.")
