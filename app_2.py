@@ -1047,6 +1047,15 @@ if tab == "Live Market":
                     stock_close = df["Close"].round(2).rename("Price").reset_index()
                     stock_close.columns = ["Date", "Price"]
                     
+                    # Convert datetime to PST
+                    stock_close["Date"] = pd.to_datetime(stock_close["Date"])
+                    if stock_close["Date"].dt.tz is None:
+                        stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
+                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Pacific")
+                    
+                    # Tooltip formatting
+                    stock_close["TimePST"] = stock_close["Date"].dt.strftime("%H:%M %p")
+                    
                     if selected_range != "1d":
                         stock_close["Date"] = stock_close["Date"].dt.strftime("%b %d")
                     
@@ -1088,28 +1097,28 @@ if tab == "Live Market":
                     
                         x_axis = alt.X(
                             "Date:T",
-                            title="Date",
-                            axis=alt.Axis(
-                                labelAngle=0,
-                                format="%b %d"
+                            title="Time (PST)",
+                            axis=alt.Axis(labelAngle=45, format="%H:%M")
+                        )
+                        
+                        stock_chart = alt.layer(
+                            alt.Chart(stock_close).mark_line().encode(
+                                x=x_axis,
+                                y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+                            ),
+                            alt.Chart(stock_close).mark_circle(size=40).encode(
+                                x="Date:T",
+                                y="Price:Q",
+                                tooltip=[
+                                    alt.Tooltip("TimePST:N", title="Time (PST)"),
+                                    alt.Tooltip("Price:Q", format=".2f")
+                                ]
                             )
+                        ).properties(
+                            width="container",
+                            height=400,
+                            title=f"{sym} Price"
                         )
-                    
-                    stock_chart = alt.layer(
-                        alt.Chart(stock_close).mark_line().encode(
-                            x=x_axis,
-                            y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
-                        ),
-                        alt.Chart(stock_close).mark_circle(size=40).encode(
-                            x=x_axis,
-                            y="Price:Q"
-                        )
-                    ).properties(
-                        width="container",
-                        height=400,
-                        title=f"{sym} Price"
-                    )
-
                     st.altair_chart(stock_chart, use_container_width=True)
                     
                 else:
