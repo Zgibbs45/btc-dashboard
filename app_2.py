@@ -16,7 +16,6 @@ from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from dateutil.parser import parse as parse_date
-from datetime import timezone
 from urllib.parse import quote
 
 
