@@ -146,8 +146,8 @@ competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "H
 # --- Helper Functions ---
 
 def format_timestamp(iso_string):
-    dt = date_parser.parse(iso_string).astimezone(timezone.utc)
-    now = datetime.now(timezone.utc).replace(tzinfo=timezone.utc)
+    dt = date_parser.parse(iso_string).astimezone(ZoneInfo("UTC"))
+    now = datetime.now(ZoneInfo("UTC"))
     delta = now - dt
 
     # Format like "June 18, 12:34 PM"
@@ -205,7 +205,7 @@ def get_history(_ticker, period):
 @st.cache_data(ttl=1800) # 30 minutes
 def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=30, page=1, domains=None):
     term = f"{query} -{exclude}" if exclude else query
-    from_date = (datetime.now(timezone.utc) - timedelta(days=from_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     
     url = (
         f"https://newsapi.org/v2/everything?q={term}&from={from_date}&sortBy={sort_by}"
@@ -263,7 +263,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     else:
         query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet has:links'
 
-    from_date = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
@@ -1069,13 +1069,6 @@ if tab == "Live Market":
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
                         eastern = tz("US/Eastern")
-                        
-                        # Ensure index is in Eastern Time safely
-                        if df.index.tz is None:
-                            df.index = df.index.tz_localize("UTC").tz_convert(eastern)
-                        else:
-                            df.index = df.index.tz_convert(eastern)
-                        df = df.between_time("09:30", "16:00")  # intraday only
                     
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
                         stock_close.columns = ["Date", "Price"]
