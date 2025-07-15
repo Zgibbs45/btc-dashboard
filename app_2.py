@@ -205,7 +205,7 @@ def get_history(_ticker, period):
 @st.cache_data(ttl=1800) # 30 minutes
 def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=30, page=1, domains=None):
     term = f"{query} -{exclude}" if exclude else query
-    from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=from_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     
     url = (
         f"https://newsapi.org/v2/everything?q={term}&from={from_date}&sortBy={sort_by}"
@@ -292,8 +292,8 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     data = response.json()
     tweets = data.get("data", [])
 
-    cutoff = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=max_age_days)
-    today = datetime.now(timezone.utc).date()
+    cutoff = datetime.now(ZoneInfo("UTC")).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=max_age_days)
+    today = datetime.now(ZoneInfo("UTC")).date()
     
     if max_age_days > 1:
         filtered = []
@@ -1068,7 +1068,7 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        eastern = tz("US/Eastern")
+                        eastern = ZoneInfo("US/Eastern")
                     
                         stock_close = df["Close"].round(2).rename("Price").reset_index()
                         stock_close.columns = ["Date", "Price"]
@@ -1199,7 +1199,7 @@ if tab == "Live Market":
         
         # Convert to ET before formatting TimeFormatted
         if comp_selected_period == "1d":
-            chart_df["Date"] = chart_df["Date"].dt.tz_convert(timezone("US/Eastern"))
+            chart_df["Date"] = chart_df["Date"].dt.tz_convert(ZoneInfo("US/Eastern"))
             chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
         else:
             chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
