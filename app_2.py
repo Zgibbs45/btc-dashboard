@@ -1194,12 +1194,16 @@ if tab == "Live Market":
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
 
         if comp_selected_period == "1d":
-            # Always assume UTC input and convert to Eastern
-            chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC", nonexistent='shift_forward', ambiguous='NaT')
+            if chart_df["Date"].dt.tz is None:
+                # Naive — localize first
+                chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC", nonexistent='shift_forward', ambiguous='NaT')
+            else:
+                # Already tz-aware — skip localize
+                pass
             chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
         else:
-            # Strip timezone for longer periods
-            chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
+            # Strip tz for longer timeframes
+            chart_df["Date"] = chart_df["Date"].dt.tz_localize(None, errors="ignore")
     
         # Prepare data
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
