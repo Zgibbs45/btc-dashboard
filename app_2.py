@@ -1047,71 +1047,66 @@ if tab == "Live Market":
                     stock_close = df["Close"].round(2).rename("Price").reset_index()
                     stock_close.columns = ["Date", "Price"]
                     
-                    # Convert datetime to PST
+                    # Timezone handling and tooltip formatting
                     stock_close["Date"] = pd.to_datetime(stock_close["Date"])
                     if stock_close["Date"].dt.tz is None:
                         stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
-                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Pacific")
+                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")  # Use EST consistently
                     
-                    # Tooltip formatting
-                    stock_close["TimePST"] = stock_close["Date"].dt.strftime("%H:%M %p")
+                    if selected_range == "1d":
+                        stock_close["TimeET"] = stock_close["Date"].dt.strftime("%H:%M %p")
+                        x_axis = alt.X(
+                            "Date:T",
+                            title="Time (ET)",
+                            axis=alt.Axis(labelAngle=45, format="%H:%M")
+                        )
+                    else:
+                        stock_close["TimeET"] = stock_close["Date"].dt.strftime("%b %d")
+                        x_axis = alt.X(
+                            "Date:T",
+                            title="Date",
+                            axis=alt.Axis(labelAngle=0, format="%b %d")
+                        )
                     
-                    if selected_range != "1d":
-                        stock_close["Date"] = stock_close["Date"].dt.strftime("%b %d")
-                    
-                    # Sort by date just in case
+                    # Sort and trim if needed
                     stock_close.sort_values("Date", inplace=True)
-                    # Calculate bounds based on Low/High
+                    
+                    # Calculate bounds
                     stock_low = df["Low"].min()
                     stock_high = df["High"].max()
-
-                    if selected_range in ["1d","5d"]:
-                        min_y = stock_low * .99
+                    
+                    if selected_range in ["1d", "5d"]:
+                        min_y = stock_low * 0.99
                         max_y = stock_high * 1.01
                     elif selected_range == "1mo":
                         min_y = stock_low * 0.985
                         max_y = stock_high * 1.05
-                    else:  # "6mo", "1y", etc.
+                    else:
                         min_y = stock_low * 0.88
                         max_y = stock_high * 1.05
                     
-                    label_angle = 45 if selected_range == "1d" else 0
-                    if selected_range == "1d":
-                        stock_close = df["Close"].round(2).rename("Price").reset_index()
-                        stock_close.columns = ["Date", "Price"]
-                    
-                        # Convert to Pacific Time
-                        stock_close["Date"] = pd.to_datetime(stock_close["Date"])
-                        if stock_close["Date"].dt.tz is None:
-                            stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
-                        stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Pacific")
-                        stock_close["TimePST"] = stock_close["Date"].dt.strftime("%H:%M %p")
-                    
-                        x_axis = alt.X(
-                            "Date:T",
-                            title="Time (EST)",
-                            axis=alt.Axis(labelAngle=45, format="%H:%M")
+                    # Build chart
+                    stock_chart = alt.layer(
+                        alt.Chart(stock_close).mark_line().encode(
+                            x=x_axis,
+                            y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+                        ),
+                        alt.Chart(stock_close).mark_circle(size=40).encode(
+                            x="Date:T",
+                            y="Price:Q",
+                            tooltip=[
+                                alt.Tooltip("TimeET:N", title="Time (ET)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("Price:Q", format=".2f")
+                            ]
                         )
+                    ).properties(
+                        width="container",
+                        height=400,
+                        title=f"{sym} Price"
+                    )
                     
-                        stock_chart = alt.layer(
-                            alt.Chart(stock_close).mark_line().encode(
-                                x=x_axis,
-                                y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
-                            ),
-                            alt.Chart(stock_close).mark_circle(size=40).encode(
-                                x="Date:T",
-                                y="Price:Q",
-                                tooltip=[
-                                    alt.Tooltip("TimePST:N", title="Time (EST)"),
-                                    alt.Tooltip("Price:Q", format=".2f")
-                                ]
-                            )
-                        ).properties(
-                            width="container",
-                            height=400,
-                            title=f"{sym} Price"
-                        )
                     st.altair_chart(stock_chart, use_container_width=True)
+
                     
                 else:
                     st.warning("No price data available for this range.")
