@@ -1228,39 +1228,35 @@ if tab == "Live Market":
     
         label_angle = 45 if comp_selected_period == "1d" else 0
     
-        line_chart = alt.layer(
-            alt.Chart(chart_df).mark_line().encode(
-                x=alt.X(
-                    "Date:T",
-                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                    axis=alt.Axis(
-                        labelAngle=label_angle,
-                        format="%H:%M" if comp_selected_period == "1d" else "%b %d"
-                    )
-                ),
-                y=alt.Y("Price:Q", scale=y_scale),
-                color="Ticker:N",
-                tooltip=[
-                    alt.Tooltip("TimeFormatted:N", title="Time"),
-                    alt.Tooltip("Price:Q", format=".2f"),
-                    alt.Tooltip("Ticker:N")
-                ]
+       line = alt.Chart(chart_df).mark_line().encode(
+            x=alt.X(
+                "Date:T",
+                title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                axis=alt.Axis(
+                    labelAngle=45 if comp_selected_period == "1d" else 0,
+                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                )
             ),
-            alt.Chart(chart_df).mark_circle(size=40).encode(
-                x="Date:T",
-                y="Price:Q",
-                color="Ticker:N"
-            )
-        ).properties(
+            y=alt.Y("Price:Q", scale=y_scale),
+            color="Ticker:N"
+        )
+        
+        points = alt.Chart(chart_df).mark_circle(size=40).encode(
+            x="Date:T",
+            y="Price:Q",
+            color="Ticker:N",
+            tooltip=[
+                alt.Tooltip("TimeFormatted:N", title="Time"),
+                alt.Tooltip("Price:Q", format=".2f"),
+                alt.Tooltip("Ticker:N")
+            ]
+        )
+        
+        st.altair_chart((line + points).properties(
             width="container",
             height=400,
             title="Stock Price Comparison"
-        )
-        if comp_selected_period == "1d":
-            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
-        else:
-            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%b %d")
-        st.altair_chart(line_chart, use_container_width=True)
+        ), use_container_width=True)
     else:
         st.info("No data available for selected tickers/time range.")
 
