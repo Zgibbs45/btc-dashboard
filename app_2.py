@@ -141,7 +141,7 @@ range_options = {
     "1 Day": "1d", "5 Days": "5d", "1 Week": "7d", "1 Month": "1mo", "6 Months": "6mo", "1 Year": "1y"
 }
 
-competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "RIOT", "WULF"]
+competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "MTPLF", "RIOT", "WULF"]
 
 # --- Helper Functions ---
 
@@ -1188,74 +1188,66 @@ if tab == "Live Market":
             else:
                 combined_df = combined_df.join(df, how="outer")
             
-    # Build chart
-    if combined_df is not None and not combined_df.empty:
-        chart_df = combined_df.reset_index()
-        chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
+        # Build chart
+        if combined_df is not None and not combined_df.empty:
+            chart_df = combined_df.reset_index()
+            chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
 
-        if comp_selected_period == "1d":
+            # Ensure Date column is tz-aware and convert to PST
+            chart_df["Date"] = pd.to_datetime(chart_df["Date"])
             if chart_df["Date"].dt.tz is None:
-                # Naive — localize first
-                chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC", nonexistent='shift_forward', ambiguous='NaT')
+                chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
+            chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Pacific")
+
+            # Prepare data
+            chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
+            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%H:%M %p")
+            chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
+            chart_df.dropna(subset=["Price"], inplace=True)
+            chart_df["Price"] = chart_df["Price"].round(2)
+
+            min_y = chart_df["Price"].min() * 0.99
+            max_y = chart_df["Price"].max() * 1.01
+
+            if math.isnan(min_y) or math.isnan(max_y):
+                st.warning("One or more selected tickers have missing price data.")
+                y_scale = alt.Scale()
             else:
-                # Already tz-aware — skip localize
-                pass
-            chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
-        else:
-            # Strip tz for longer timeframes
-            chart_df["Date"] = chart_df["Date"].dt.tz_localize(None, errors="ignore")
-    
-        # Prepare data
-        chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
-        chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M" if comp_selected_period == "1d" else "%b %d")
-        chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
-        chart_df.dropna(subset=["Price"], inplace=True)
-        chart_df["Price"] = chart_df["Price"].round(2)
-    
-        min_y = chart_df["Price"].min() * 0.99
-        max_y = chart_df["Price"].max() * 1.01
-    
-        if math.isnan(min_y) or math.isnan(max_y):
-            st.warning("One or more selected tickers have missing price data.")
-            y_scale = alt.Scale()
-        else:
-            y_scale = alt.Scale(domain=[min_y, max_y])
-    
-        label_angle = 45 if comp_selected_period == "1d" else 0
-    
-        line = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X(
-                "Date:T",
-                title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                axis=alt.Axis(
-                    labelAngle=45 if comp_selected_period == "1d" else 0,
-                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
-                )
-            ),
-            y=alt.Y("Price:Q", scale=y_scale),
-            color="Ticker:N"
-        )
-            
-        points = alt.Chart(chart_df).mark_circle(size=40).encode(
-            x="Date:T",
-            y="Price:Q",
-            color="Ticker:N",
-            tooltip=[
-                alt.Tooltip("TimeFormatted:N", title="Time"),
-                alt.Tooltip("Price:Q", format=".2f"),
-                alt.Tooltip("Ticker:N")
-            ]
-        )
-        
-        st.altair_chart((line + points).properties(
-            width="container",
-            height=400,
-            title="Stock Price Comparison"
-        ), use_container_width=True)
-    else:
-        st.info("No data available for selected tickers/time range.")
+                y_scale = alt.Scale(domain=[min_y, max_y])
 
+            label_angle = 45 if comp_selected_period == "1d" else 0
 
+            line = alt.Chart(chart_df).mark_line().encode(
+                x=alt.X(
+                    "Date:T",
+                    title="Time (PST)" if comp_selected_period == "1d" else "Date",
+                    axis=alt.Axis(
+                        labelAngle=label_angle,
+                        format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                    )
+                ),
+                y=alt.Y("Price:Q", scale=y_scale),
+                color="Ticker:N"
+            )
+
+            points = alt.Chart(chart_df).mark_circle(size=40).encode(
+                x="Date:T",
+                y="Price:Q",
+                color="Ticker:N",
+                tooltip=[
+                    alt.Tooltip("TimePST:N", title="Time (PST)"),
+                    alt.Tooltip("Price:Q", format=".2f"),
+                    alt.Tooltip("Ticker:N")
+                ]
+            )
+
+            st.altair_chart((line + points).properties(
+                width="container",
+                height=400,
+                title="Stock Price Comparison"
+            ), use_container_width=True)
+        else:
+            st.info("No data available for selected tickers/time range.")
    
     # --- Combined Filing & Press Metrics ---
     st.markdown("### 📋 Competitor Financial Metrics Table")
