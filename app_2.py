@@ -11,7 +11,7 @@ import pytz
 import altair as alt
 import math
 from pycoingecko import CoinGeckoAPI
-from pytz import timezone
+from pytz import timezone as pytz_timezone
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
@@ -1208,7 +1208,7 @@ if tab == "Live Market":
         
         # Convert to ET before formatting TimeFormatted
         if comp_selected_period == "1d":
-            chart_df["Date"] = chart_df["Date"].dt.tz_convert(timezone("US/Eastern"))
+            chart_df["Date"] = chart_df["Date"].dt.tz_convert(pytz_timezone("US/Eastern"))
             chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
         else:
             chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
