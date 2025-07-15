@@ -11,6 +11,7 @@ import pytz
 import altair as alt
 import math
 from pycoingecko import CoinGeckoAPI
+from pytz import timezone
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
@@ -1201,12 +1202,18 @@ if tab == "Live Market":
     if combined_df is not None and not combined_df.empty:
         chart_df = combined_df.reset_index()
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
+
+        # Localize to UTC if needed
+        if chart_df["Date"].dt.tz is None or str(chart_df["Date"].dt.tz) == "None":
+            chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
         
-        # Convert to ET for 1-day, strip timezone otherwise
+        # Convert to ET before formatting TimeFormatted
         if comp_selected_period == "1d":
-            chart_df["Date"] = chart_df["Date"].dt.tz_convert(pytz.timezone("US/Eastern"))
+            chart_df["Date"] = chart_df["Date"].dt.tz_convert(timezone("US/Eastern"))
+            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
         else:
             chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
+            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%b %d")
     
         # Prepare data
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
