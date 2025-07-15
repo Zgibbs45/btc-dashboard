@@ -1222,9 +1222,19 @@ if tab == "Live Market":
             y_scale = alt.Scale(domain=[min_y, max_y])
         line_chart = alt.layer(
             alt.Chart(chart_df).mark_line().encode(
-                x=alt.X("Date:T", title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                        axis=alt.Axis(labelAngle=label_angle,
-                                      format="%H:%M" if comp_selected_period == "1d" else "%b %d")),
+                x=alt.X(
+                    "Date:T",
+                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                    axis=alt.Axis(
+                        labelAngle=45 if comp_selected_period == "1d" else 0,
+                        format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                    )
+                ),
+                tooltip=[
+                    alt.Tooltip("Date:T", title="Time", format="%H:%M" if comp_selected_period == "1d" else "%b %d"),
+                    alt.Tooltip("Price:Q", format=".2f"),
+                    alt.Tooltip("Ticker:N")
+                ],
                 y=alt.Y("Price:Q", scale=y_scale),
                 color="Ticker:N"
             ),
