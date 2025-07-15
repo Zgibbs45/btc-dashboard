@@ -9,6 +9,7 @@ import re
 import html
 import altair as alt
 import math
+import pytz
 from zoneinfo import ZoneInfo
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
@@ -769,13 +770,19 @@ if tab == "Bitcoin News":
                 f"${btc_metrics.get('volume', 0):,.0f}"
             )
             
-        btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
+        now = datetime.now(tz=ZoneInfo("UTC"))
+        twenty_four_hours_ago = now - timedelta(hours=24)
+        
+        # Force 2 days to get enough granularity
+        btc_data_full = get_history(btc, period="2d")  # still uses 5m interval under the hood
+        
+        # Reset and localize
+        btc_data_full = btc_data_full.dropna(subset=["Close"])
+        btc_data_full.index = pd.to_datetime(btc_data_full.index).tz_localize("UTC")
+        btc_data_full = btc_data_full[btc_data_full.index >= twenty_four_hours_ago]
+        
+        btc_close = btc_data_full["Close"].round(2).rename("Price").reset_index()
         btc_close.columns = ["Date", "Price"]
-
-        # Convert to EST
-        btc_close["Date"] = pd.to_datetime(btc_close["Date"])
-        if btc_close["Date"].dt.tz is None:
-            btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
         btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Eastern")
 
         # Optional trim for 1 Week
