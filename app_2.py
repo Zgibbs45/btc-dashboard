@@ -141,7 +141,7 @@ range_options = {
     "1 Day": "1d", "5 Days": "5d", "1 Week": "7d", "1 Month": "1mo", "6 Months": "6mo", "1 Year": "1y"
 }
 
-competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "MTPLF", "RIOT", "WULF"]
+competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "RIOT", "WULF"]
 
 # --- Helper Functions ---
 
