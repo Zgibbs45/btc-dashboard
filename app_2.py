@@ -1199,17 +1199,18 @@ if tab == "Live Market":
             
     # Build chart
     if combined_df is not None and not combined_df.empty:
-        chart_df = combined_df.reset_index()
+        chart_df = chart_df.reset_index()
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
-        chart_df["Date"] = pd.to_datetime(chart_df["Date"]).dt.tz_localize(None)
+        chart_df["Date"] = pd.to_datetime(chart_df["Date"]).dt.tz_localize("UTC")
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = chart_df["Price"].round(2)
-
         label_angle = 45 if comp_selected_period == "1d" else 0
         
         if comp_selected_period == "1d":
-            chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
+            chart_df["Date"] = chart_df["Date"].dt.tz_convert(tz("US/Eastern"))
+        else:
+            chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)  # remove tz info
 
         min_y = chart_df["Price"].min() * 0.99
         max_y = chart_df["Price"].max() * 1.01
