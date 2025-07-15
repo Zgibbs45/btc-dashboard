@@ -1193,17 +1193,12 @@ if tab == "Live Market":
         chart_df = combined_df.reset_index()
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
 
-        # Localize to UTC if needed
-        if chart_df["Date"].dt.tz is None or str(chart_df["Date"].dt.tz) == "None":
-            chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
-
-       
-        # Convert to ET before formatting TimeFormatted
         if comp_selected_period == "1d":
-            if chart_df["Date"].dt.tz is None:
-                chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
-            chart_df["Date"] = chart_df["Date"].dt.tz_convert(ZoneInfo("US/Eastern"))
+            # Always assume UTC input and convert to Eastern
+            chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC", nonexistent='shift_forward', ambiguous='NaT')
+            chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
         else:
+            # Strip timezone for longer periods
             chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
     
         # Prepare data
@@ -1226,7 +1221,7 @@ if tab == "Live Market":
     
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
-                "Date:T",
+                "DateET:T",
                 title="Time (ET)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=45 if comp_selected_period == "1d" else 0,
