@@ -1203,10 +1203,8 @@ if tab == "Live Market":
             if chart_df["Date"].dt.tz is None:
                 chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
             chart_df["Date"] = chart_df["Date"].dt.tz_convert(ZoneInfo("US/Eastern"))
-            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
         else:
             chart_df["Date"] = chart_df["Date"].dt.tz_localize(None)
-            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%b %d")
     
         # Prepare data
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
@@ -1227,17 +1225,17 @@ if tab == "Live Market":
         label_angle = 45 if comp_selected_period == "1d" else 0
     
         line = alt.Chart(chart_df).mark_line().encode(
-                x=alt.X(
-                    "Date:T",
-                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                    axis=alt.Axis(
-                        labelAngle=45 if comp_selected_period == "1d" else 0,
-                        format="%H:%M" if comp_selected_period == "1d" else "%b %d"
-                    )
-                ),
-                y=alt.Y("Price:Q", scale=y_scale),
-                color="Ticker:N"
-            )
+            x=alt.X(
+                "Date:T",
+                title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                axis=alt.Axis(
+                    labelAngle=45 if comp_selected_period == "1d" else 0,
+                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                )
+            ),
+            y=alt.Y("Price:Q", scale=y_scale),
+            color="Ticker:N"
+        )
             
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
             x="Date:T",
