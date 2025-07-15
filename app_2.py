@@ -1204,7 +1204,7 @@ if tab == "Live Market":
             time_title = "Time (PST)"
         else:
             chart_df["TimePST"] = chart_df["Date"].dt.strftime("%b %d")
-            date_title = "Date"
+            time_title = "Date"
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = chart_df["Price"].round(2)
@@ -1230,12 +1230,14 @@ if tab == "Live Market":
             color="Ticker:N"
         )
 
+        tooltip_title = "Time (PST)" if comp_selected_period == "1d" else "Date"
+
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
             x="Date:T",
             y="Price:Q",
             color="Ticker:N",
             tooltip=[
-                alt.Tooltip("TimePST:N", title="Time (EST)"),
+                alt.Tooltip("TimePST:N", title=tooltip_title),
                 alt.Tooltip("Price:Q", format=".2f"),
                 alt.Tooltip("Ticker:N")
             ]
