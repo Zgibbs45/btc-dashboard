@@ -1216,6 +1216,11 @@ if tab == "Live Market":
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = chart_df["Price"].round(2)
+        if comp_selected_period == "1d":
+            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%H:%M")
+        else:
+            chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%b %d")
+
     
         min_y = chart_df["Price"].min() * 0.99
         max_y = chart_df["Price"].max() * 1.01
