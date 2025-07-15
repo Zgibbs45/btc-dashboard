@@ -1200,7 +1200,8 @@ if tab == "Live Market":
             chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Pacific")
 
             # Prepare data
-            chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
+            if "Ticker" not in chart_df.columns:
+                chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
             chart_df["TimePST"] = chart_df["Date"].dt.strftime("%H:%M %p")
             chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
             chart_df.dropna(subset=["Price"], inplace=True)
