@@ -1192,11 +1192,7 @@ if tab == "Live Market":
     if combined_df is not None and not combined_df.empty:
         chart_df = combined_df.reset_index()
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
-
-        # Localize to UTC if needed
-        if chart_df["Date"].dt.tz is None or str(chart_df["Date"].dt.tz) == "None":
-            chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
-        
+       
         # Convert to ET before formatting TimeFormatted
         if comp_selected_period == "1d":
             chart_df["Date"] = chart_df["Date"].dt.tz_convert(ZoneInfo("US/Eastern"))
