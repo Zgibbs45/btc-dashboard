@@ -769,59 +769,23 @@ if tab == "Bitcoin News":
                 f"${btc_metrics.get('volume', 0):,.0f}"
             )
             
-        # Handle 1-Day separately to get true 24-hour rolling window
-        if sel == "1 Day":
-            btc_data_full = get_history(btc, period="2d")
-            btc_data_full.index = pd.to_datetime(btc_data_full.index)
-            if btc_data_full.index.tz is None:
-                btc_data_full.index = btc_data_full.index.tz_localize("UTC").tz_convert("US/Eastern")
-            else:
-                btc_data_full.index = btc_data_full.index.tz_convert("US/Eastern")
-            
-            # Ensure timezone alignment (Eastern Time)
-            btc_data_full.index = btc_data_full.index.tz_localize("UTC").tz_convert("US/Eastern")
-            
-            now_et = datetime.now(ZoneInfo("US/Eastern"))
-            twenty_four_hours_ago = now_et - timedelta(hours=24)
-            
-            btc_data_full = btc_data_full[btc_data_full.index >= twenty_four_hours_ago]
-        
-            btc_close = btc_data_full["Close"].round(2).rename("Price").reset_index()
-            btc_close.columns = ["Date", "Price"]
-            btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Eastern")
-            btc_close["Label"] = btc_close["Date"].dt.strftime("%H:%M %p")
-        
-            x_axis = alt.X(
-                "Date:T",
-                title="Time (ET)",
-                axis=alt.Axis(labelAngle=45, format="%H:%M")
-            )
-            tooltip_title = "Time (ET)"
-        
-        else:
-            btc_close = data["Close"].dropna().round(2).rename("Price").reset_index()
-            btc_close.columns = ["Date", "Price"]
-            btc_close["Date"] = pd.to_datetime(btc_close["Date"])
-            if btc_close["Date"].dt.tz is None:
-                btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
-            btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Eastern")
-        
-            if sel == "1 Week":
-                btc_close = btc_close.tail(7)
-        
-            btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
-        
-            x_axis = alt.X(
-                "Date:T",
-                title="Date",
-                axis=alt.Axis(labelAngle=0, format="%b %d")
-            )
-            tooltip_title = "Date"
-        
-        # Calculate Y-axis range
+        btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
+        btc_close.columns = ["Date", "Price"]
+
+        # Convert to EST
+        btc_close["Date"] = pd.to_datetime(btc_close["Date"])
+        if btc_close["Date"].dt.tz is None:
+            btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
+        btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Eastern")
+
+        # Optional trim for 1 Week
+        if sel == "1 Week":
+            btc_close = btc_close.tail(7)
+
+        # Y-axis bounds
         btc_low = btc_close["Price"].min()
         btc_high = btc_close["Price"].max()
-        
+
         if selected_range in ["1d", "5d"]:
             min_y = btc_low * .995
             max_y = btc_high * 1.005
@@ -831,13 +795,31 @@ if tab == "Bitcoin News":
         else:
             min_y = btc_low * 0.88
             max_y = btc_high * 1.1
-        
-        # Build chart
+
+        # Label for tooltip + x-axis format
+        if selected_range == "1d":
+            btc_close["Label"] = btc_close["Date"].dt.strftime("%H:%M %p")
+            x_axis = alt.X(
+                "Date:T",
+                title="Time (ET)",
+                axis=alt.Axis(labelAngle=45, format="%H:%M")
+            )
+            tooltip_title = "Time (ET)"
+        else:
+            btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
+            x_axis = alt.X(
+                "Date:T",
+                title="Date",
+                axis=alt.Axis(labelAngle=0, format="%b %d")
+            )
+            tooltip_title = "Date"
+
+        # Build chart with points
         line = alt.Chart(btc_close).mark_line().encode(
             x=x_axis,
             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
         )
-        
+
         points = alt.Chart(btc_close).mark_circle(size=40).encode(
             x="Date:T",
             y="Price:Q",
@@ -846,15 +828,14 @@ if tab == "Bitcoin News":
                 alt.Tooltip("Price:Q", format=".2f")
             ]
         )
-        
+
         chart = (line + points).properties(
             width="container",
             height=400,
             title="Bitcoin Price"
         )
-        
-        st.altair_chart(chart, use_container_width=True)
 
+        st.altair_chart(chart, use_container_width=True)
 
     col1, col2 = st.columns([1.8,2.2])
 
