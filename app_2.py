@@ -7,11 +7,10 @@ import os
 import time
 import re
 import html
-import pytz
 import altair as alt
 import math
+from zoneinfo import ZoneInfo
 from pycoingecko import CoinGeckoAPI
-from pytz import timezone
 from PIL import Image
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
@@ -1069,7 +1068,6 @@ if tab == "Live Market":
                     
                     label_angle = 45 if selected_range == "1d" else 0
                     if selected_range == "1d":
-                        from pytz import timezone as tz
                         eastern = tz("US/Eastern")
                         
                         # Ensure index is in Eastern Time safely
