@@ -1215,7 +1215,7 @@ if tab == "Live Market":
             chart_df["TimeFormatted"] = chart_df["Date"].dt.strftime("%b %d")
     
         # Prepare data
-        chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
+        chart_df = chart_df.melt(id_vars=["Date", "TimeFormatted"], var_name="Ticker", value_name="Price")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df["Price"] = chart_df["Price"].round(2)
