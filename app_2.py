@@ -771,6 +771,7 @@ if tab == "Bitcoin News":
             
         btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
+        btc_close["Price"] = btc_close["Price"].round(2)
 
         # Convert to EST
         btc_close["Date"] = pd.to_datetime(btc_close["Date"])
