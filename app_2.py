@@ -1199,7 +1199,12 @@ if tab == "Live Market":
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
 
         # Format time for tooltip
-        chart_df["TimePST"] = chart_df["Date"].dt.strftime("%H:%M %p")
+        if comp_selected_period == "1d":
+            chart_df["DisplayTime"] = chart_df["Date"].dt.strftime("%H:%M %p")
+            time_title = "Time (PST)"
+        else:
+            chart_df["DisplayTime"] = chart_df["Date"].dt.strftime("%b %d")
+            time_title = "Date"
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = chart_df["Price"].round(2)
