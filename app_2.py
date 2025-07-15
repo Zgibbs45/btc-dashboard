@@ -774,9 +774,9 @@ if tab == "Bitcoin News":
             now = datetime.now(ZoneInfo("UTC"))
             twenty_four_hours_ago = now - timedelta(hours=24)
         
-            btc_data_full = get_history(btc, period="2d")  # Uses 5m interval automatically
+            btc_data_full = get_history(btc, period="2d")
             btc_data_full = btc_data_full.dropna(subset=["Close"])
-            btc_data_full.index = pd.to_datetime(btc_data_full.index).tz_localize("UTC")
+            btc_data_full.index = pd.to_datetime(btc_data_full.index).tz_convert("UTC")
             btc_data_full = btc_data_full[btc_data_full.index >= twenty_four_hours_ago]
         
             btc_close = btc_data_full["Close"].round(2).rename("Price").reset_index()
