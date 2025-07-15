@@ -771,12 +771,16 @@ if tab == "Bitcoin News":
             
         # Handle 1-Day separately to get true 24-hour rolling window
         if sel == "1 Day":
-            now = datetime.now(ZoneInfo("UTC"))
-            twenty_four_hours_ago = now - timedelta(hours=24)
-        
             btc_data_full = get_history(btc, period="2d")
             btc_data_full = btc_data_full.dropna(subset=["Close"])
-            btc_data_full.index = pd.to_datetime(btc_data_full.index).tz_convert("UTC")
+            btc_data_full.index = pd.to_datetime(btc_data_full.index)
+            
+            # Ensure timezone alignment (Eastern Time)
+            btc_data_full.index = btc_data_full.index.tz_localize("UTC").tz_convert("US/Eastern")
+            
+            now_et = datetime.now(ZoneInfo("US/Eastern"))
+            twenty_four_hours_ago = now_et - timedelta(hours=24)
+            
             btc_data_full = btc_data_full[btc_data_full.index >= twenty_four_hours_ago]
         
             btc_close = btc_data_full["Close"].round(2).rename("Price").reset_index()
