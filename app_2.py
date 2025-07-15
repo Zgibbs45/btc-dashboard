@@ -1228,19 +1228,19 @@ if tab == "Live Market":
     
         label_angle = 45 if comp_selected_period == "1d" else 0
     
-       line = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X(
-                "Date:T",
-                title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                axis=alt.Axis(
-                    labelAngle=45 if comp_selected_period == "1d" else 0,
-                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
-                )
-            ),
-            y=alt.Y("Price:Q", scale=y_scale),
-            color="Ticker:N"
-        )
-        
+        line = alt.Chart(chart_df).mark_line().encode(
+                x=alt.X(
+                    "Date:T",
+                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                    axis=alt.Axis(
+                        labelAngle=45 if comp_selected_period == "1d" else 0,
+                        format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                    )
+                ),
+                y=alt.Y("Price:Q", scale=y_scale),
+                color="Ticker:N"
+            )
+            
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
             x="Date:T",
             y="Price:Q",
