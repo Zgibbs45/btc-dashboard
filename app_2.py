@@ -1221,7 +1221,7 @@ if tab == "Live Market":
     
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
-                "DateET:T",
+                "Date:T",
                 title="Time (ET)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=45 if comp_selected_period == "1d" else 0,
