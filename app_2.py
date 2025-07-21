@@ -802,13 +802,13 @@ if tab == "Bitcoin News":
 
         # Label for tooltip + x-axis format
         if selected_range == "1d":
-            btc_close["Label"] = btc_close["Date"].dt.strftime("%H:%M %p")
+            btc_close["Label"] = btc_close["Date"].dt.strftime("%-I:%M %p")
             x_axis = alt.X(
                 "Date:T",
-                title="Time (ET)",
+                title="Time (PST)",
                 axis=alt.Axis(labelAngle=45, format="%H:%M")
             )
-            tooltip_title = "Time (ET)"
+            tooltip_title = "Time (PST)"
         else:
             btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
             x_axis = alt.X(
