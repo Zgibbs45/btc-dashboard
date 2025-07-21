@@ -777,11 +777,9 @@ if tab == "Bitcoin News":
         btc_close["Date"] = pd.to_datetime(btc_close["Date"])
         if btc_close["Date"].dt.tz is None:
             btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
-        btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Eastern")
-        btc_close["Label"] = btc_close["Date_EST"].dt.strftime("%-I:%M %p")
-        if selected_range == "1d":
-            btc_close.set_index("Date", inplace=True)
-            btc_close = btc_close.resample("30min").first().dropna().reset_index()
+        
+        btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Pacific")
+        btc_close["Label"] = btc_close["Date"].dt.strftime("%I:%M %p")
 
         # Optional trim for 1 Week
         if sel == "1 Week":
@@ -807,7 +805,7 @@ if tab == "Bitcoin News":
             x_axis = alt.X(
                 "Date:T",
                 title="Time (PST)",
-                axis=alt.Axis(labelAngle=45, format="%H:%M")
+                axis=alt.Axis(labelAngle=45, format="%I:%M %p")
             )
             tooltip_title = "Time (PST)"
         else:
