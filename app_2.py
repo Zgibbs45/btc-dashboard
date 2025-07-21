@@ -816,7 +816,7 @@ if tab == "Bitcoin News":
             x_axis = alt.X(
                 "Date:T",
                 title="Date",
-                axis=alt.Axis(labelAngle=0, format="%b %d")
+                axis=alt.Axis(labelAngle=45, format="%b %d")
             )
             tooltip_title = "Date"
 
@@ -1094,22 +1094,18 @@ if tab == "Live Market":
                     stock_close["Date"] = pd.to_datetime(stock_close["Date"])
                     if stock_close["Date"].dt.tz is None:
                         stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
-                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")  # Use EST consistently
+                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
+                    stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
                     
-                    if selected_range == "1d":
-                        stock_close["TimeET"] = stock_close["Date"].dt.strftime("%H:%M %p")
-                        x_axis = alt.X(
-                            "Date:T",
-                            title="Time (ET)",
-                            axis=alt.Axis(labelAngle=45, format="%H:%M")
+                    x_axis = alt.X(
+                        "Date:T",
+                        title="Time (EST)" if selected_range == "1d" else "Date",
+                        axis=alt.Axis(
+                            labelAngle=45 if selected_range == "1d" else 0,
+                            format="%I:%M %p" if selected_range == "1d" else "%b %d"
                         )
-                    else:
-                        stock_close["TimeET"] = stock_close["Date"].dt.strftime("%b %d")
-                        x_axis = alt.X(
-                            "Date:T",
-                            title="Date",
-                            axis=alt.Axis(labelAngle=0, format="%b %d")
-                        )
+                    )
+
                     
                     # Sort and trim if needed
                     stock_close.sort_values("Date", inplace=True)
