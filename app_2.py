@@ -778,6 +778,9 @@ if tab == "Bitcoin News":
         if btc_close["Date"].dt.tz is None:
             btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
         btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Eastern")
+        if selected_range == "1d":
+            btc_close.set_index("Date", inplace=True)
+            btc_close = btc_close.resample("30min").first().dropna().reset_index()
 
         # Optional trim for 1 Week
         if sel == "1 Week":
