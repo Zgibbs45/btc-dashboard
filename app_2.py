@@ -1134,7 +1134,7 @@ if tab == "Live Market":
                             x="Date:T",
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip("Label:N", title="Time (EST)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("Label:N", title="Time (PST)" if selected_range == "1d" else "Date"),
                                 alt.Tooltip("Price:Q", format=".2f")
                             ]
                         )
@@ -1259,7 +1259,7 @@ if tab == "Live Market":
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
                 "Date:T",
-                title="Time (EST)" if comp_selected_period == "1d" else "Date",
+                title="Time (PST)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=label_angle,
                     format="%I:%M %p" if comp_selected_period == "1d" else "%b %d"
