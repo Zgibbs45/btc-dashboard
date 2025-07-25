@@ -1262,7 +1262,7 @@ if tab == "Live Market":
                 title="Time (EST)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=label_angle,
-                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d"
                 )
             ),
             y=alt.Y("Price:Q", scale=y_scale),
