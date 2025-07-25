@@ -1134,7 +1134,7 @@ if tab == "Live Market":
                             x="Date:T",
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip("TimeET:N", title="Time (EST)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("Label:N", title="Time (EST)" if selected_range == "1d" else "Date"),
                                 alt.Tooltip("Price:Q", format=".2f")
                             ]
                         )
