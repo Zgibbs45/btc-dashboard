@@ -959,7 +959,7 @@ if tab == "Bitcoin News":
 if tab == "Live Market":
     btc_metrics = get_coingecko_btc_data()
     btc         = yf.Ticker("BTC-USD")
-    sym = st.session_state.get("stock_lookup_ticker", "MARA").strip().upper()
+    sym = st.session_state.get("stock_lookup_ticker", "CLSK").strip().upper()
     ticker_obj = yf.Ticker(sym)
     try:
         info = ticker_obj.get_info()
@@ -1094,12 +1094,12 @@ if tab == "Live Market":
                     stock_close["Date"] = pd.to_datetime(stock_close["Date"])
                     if stock_close["Date"].dt.tz is None:
                         stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
-                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Pacific")
+                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
                     stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
                     
                     x_axis = alt.X(
                         "Date:T",
-                        title="Time (PST)" if selected_range == "1d" else "Date",
+                        title="Time (EST)" if selected_range == "1d" else "Date",
                         axis=alt.Axis(
                             labelAngle=45 if selected_range == "1d" else 0,
                             format="%I:%M %p" if selected_range == "1d" else "%b %d"
@@ -1134,7 +1134,7 @@ if tab == "Live Market":
                             x="Date:T",
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip("Label:N", title="Time (PST)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("TimeET:N", title="Time (EST)" if selected_range == "1d" else "Date"),
                                 alt.Tooltip("Price:Q", format=".2f")
                             ]
                         )
@@ -1259,10 +1259,10 @@ if tab == "Live Market":
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
                 "Date:T",
-                title="Time (PST)" if comp_selected_period == "1d" else "Date",
+                title="Time (EST)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=label_angle,
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d"
+                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
                 )
             ),
             y=alt.Y("Price:Q", scale=y_scale),
