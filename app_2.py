@@ -209,7 +209,7 @@ def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=
     
     url = (
         f"https://newsapi.org/v2/everything?q={term}&from={from_date}&sortBy={sort_by}"
-        f"&language=en&pageSize={page_size}&page={page}&apiKey={st.secrets["NEWS_API_KEY"]}"
+        f"&language=en&pageSize={page_size}&page={page}&apiKey={st.secrets['NEWS_API_KEY']}"
     )
     
     if domains:
@@ -256,7 +256,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
-    headers = {"Authorization": f"Bearer {st.secrets["TWITTER_BEARER_TOKEN"]}"}
+    headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
 
     if query_scope == "CleanSpark":
         query = '("CleanSpark" OR #CLSK OR CLSK) -is:retweet has:links'
@@ -786,7 +786,8 @@ if tab == "Bitcoin News":
 
         # Optional trim for 1 Week
         if sel == "1 Week":
-            btc_close = btc_close.tail(7)
+            # Keep full 1-week range; do not arbitrarily tail rows
+            pass
 
         # Y-axis bounds
         btc_low = btc_close["Price"].min()
@@ -880,7 +881,7 @@ if tab == "Bitcoin News":
                 text = text.replace("&", "<<<AMP>>>")  # temporary placeholder
                 text = html.escape(text)
                 return text.replace("<<<AMP>>>", "&")
-            final_text = clean_text.replace("\n", "<br>")
+            final_text = html.escape(clean_text).replace("\n", "<br>")
             
             with st.container():
                 st.markdown(
@@ -1134,7 +1135,7 @@ if tab == "Live Market":
                             x="Date:T",
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip("TimeET:N", title="Time (EST)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("Label:N", title="Time (EST)" if selected_range == "1d" else "Date"),
                                 alt.Tooltip("Price:Q", format=".2f")
                             ]
                         )
@@ -1239,7 +1240,7 @@ if tab == "Live Market":
 
         # Format time for tooltip
         if comp_selected_period == "1d":
-            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%H:%M %p")
+            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%I:%M %p")
             time_title = "Time (PST)"
         else:
             chart_df["TimePST"] = chart_df["Date"].dt.strftime("%b %d")
@@ -1259,10 +1260,10 @@ if tab == "Live Market":
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
                 "Date:T",
-                title="Time (EST)" if comp_selected_period == "1d" else "Date",
+                title="Time (PST)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=label_angle,
-                    format="%H:%M" if comp_selected_period == "1d" else "%b %d"
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d"
                 )
             ),
             y=alt.Y("Price:Q", scale=y_scale),
