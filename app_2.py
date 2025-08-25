@@ -847,29 +847,21 @@ if tab == "Bitcoin News":
     col1, col2 = st.columns([1.8,2.2])
 
     with col1:
-        st.subheader("🐦 Twitter Feed")
+        st.subheader("🐦 Twitter Feed (last 24 hours)")
 
         # Row 1: Scope pill (full width)
         tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default="CleanSpark Only", key="tw_scope")
 
-        # Row 2: Time + Sort filters side-by-side
-        m1, m2 = st.columns([1, 1])
+        # Row 2: Sort only (fixed 24h window)
+        tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default="Likes", key="tw_sort")
 
-        with m1:
-            tw_days = st.session_state.get("tw_days", "1 Day")
-            st.pills("Tweets from the past...", ["1 Day", "3 Days", "1 Week"], default=tw_days, key="tw_days")
-
-        with m2:
-            tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets", "Published"], default="Likes", key="tw_sort")
-            
         tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
-        tw_days_map = {"1 Day": 1, "3 Days": 3, "1 Week": 7}
-        tw_max_days = tw_days_map[tw_days]
+        tw_max_days = 1  # fixed 24-hour window
 
         tweets = get_cleanspark_tweets(
             query_scope=tw_scope_val,
-            max_age_days=tw_max_days,
-            sort_by=tw_sort.lower(),  # lowercase for consistency
+            max_age_days=tw_max_days,        # always 1 day
+            sort_by=tw_sort.lower(),         # "likes" or "retweets"
             max_results=15
         )
         
