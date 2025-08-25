@@ -808,10 +808,10 @@ if tab == "Bitcoin News":
             btc_close["Label"] = btc_close["Date"].dt.strftime("%-I:%M %p")
             x_axis = alt.X(
                 "Date:T",
-                title="Time (EST)",
+                title="Time (PST)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p")
             )
-            tooltip_title = "Time (EST)"
+            tooltip_title = "Time (PST)"
         else:
             btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
             x_axis = alt.X(
