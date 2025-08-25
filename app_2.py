@@ -808,10 +808,10 @@ if tab == "Bitcoin News":
             btc_close["Label"] = btc_close["Date"].dt.strftime("%-I:%M %p")
             x_axis = alt.X(
                 "Date:T",
-                title="Time (PST)",
+                title="Time (EST)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p")
             )
-            tooltip_title = "Time (PST)"
+            tooltip_title = "Time (EST)"
         else:
             btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
             x_axis = alt.X(
@@ -1232,10 +1232,10 @@ if tab == "Live Market":
 
         # Format time for tooltip
         if comp_selected_period == "1d":
-            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%I:%M %p")
-            time_title = "Time (PST)"
+            chart_df["TimeEST"] = chart_df["Date"].dt.strftime("%I:%M %p")
+            time_title = "Time (EST)"
         else:
-            chart_df["TimePST"] = chart_df["Date"].dt.strftime("%b %d")
+            chart_df["TimeEST"] = chart_df["Date"].dt.strftime("%b %d")
             time_title = "Date"
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df.dropna(subset=["Price"], inplace=True)
@@ -1252,7 +1252,7 @@ if tab == "Live Market":
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
                 "Date:T",
-                title="Time (PST)" if comp_selected_period == "1d" else "Date",
+                title="Time (EST)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=label_angle,
                     format="%I:%M %p" if comp_selected_period == "1d" else "%b %d"
@@ -1262,14 +1262,14 @@ if tab == "Live Market":
             color="Ticker:N"
         )
 
-        tooltip_title = "Time (PST)" if comp_selected_period == "1d" else "Date"
+        tooltip_title = "Time (EST)" if comp_selected_period == "1d" else "Date"
 
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
             x="Date:T",
             y="Price:Q",
             color="Ticker:N",
             tooltip=[
-                alt.Tooltip("TimePST:N", title=tooltip_title),
+                alt.Tooltip("TimeEST:N", title=tooltip_title),
                 alt.Tooltip("Price:Q", format=".2f"),
                 alt.Tooltip("Ticker:N")
             ]
