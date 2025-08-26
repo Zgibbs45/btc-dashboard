@@ -959,21 +959,37 @@ if tab == "Bitcoin News":
 if tab == "Live Market":
     btc_metrics = get_coingecko_btc_data()
     btc         = yf.Ticker("BTC-USD")
-    sym = st.session_state.get("stock_lookup_ticker", "CLSK").strip().upper()
-    ticker_obj = yf.Ticker(sym)
+    raw_sym = st.session_state.get("stock_lookup_ticker")
+    sym = (raw_sym or "CLSK").strip().upper()  # <-- never empty
+
     try:
+        ticker_obj = yf.Ticker(sym)
         info = ticker_obj.get_info()
         company_name = info.get("longName", sym)
     except Exception:
         company_name = sym
+        info = {}
+        ticker_obj = None
     # Stock
     with st.container():
         st.subheader(f"📊 Stock Market Lookup: {company_name}")        
         m1, m2 = st.columns([1.5, 2.5])
         with m1:
-            sym = st.text_input("Stock ticker:", "CLSK", key="stock_lookup_ticker").strip().upper()
-            cik = cik_map.get(sym.upper())
-            entered_ticker = sym.upper()
+            raw = st.text_input(
+                "Stock ticker:", 
+                "CLSK", 
+                key="stock_lookup_ticker",
+                placeholder="e.g., CLSK"
+            )
+            sym = (raw or "").strip().upper()
+            cik = cik_map.get(sym) if sym else None
+            entered_ticker = sym or ""
+
+        # Prevent crash on empty input: hint + safe fallback
+        if not sym:
+            st.info("Type a ticker to search (e.g., CLSK). Defaulting to CLSK.")
+            sym = "CLSK"
+            st.session_state["stock_lookup_ticker"] = sym
         
         with m2:
             market_range_options = {k: v for k, v in range_options.items() if k != "1 Week"}
