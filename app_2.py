@@ -797,8 +797,8 @@ if tab == "Bitcoin News":
             min_y = btc_low * .995
             max_y = btc_high * 1.005
         elif selected_range == "5d":
-            min_y = btc_low * 0.985
-            max_y = btc_high * 1.02
+            min_y = btc_low * 1.0
+            max_y = btc_high * 1.0
         elif selected_range == "1mo":
             min_y = btc_low * 0.985
             max_y = btc_high * 1.02
