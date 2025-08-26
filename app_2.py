@@ -989,7 +989,6 @@ if tab == "Live Market":
         if not sym:
             st.info("Type a ticker to search (e.g., CLSK). Defaulting to CLSK.")
             sym = "CLSK"
-            st.session_state["stock_lookup_ticker"] = sym
         
         with m2:
             market_range_options = {k: v for k, v in range_options.items() if k != "1 Week"}
