@@ -138,7 +138,11 @@ SEC_FACTS = {
 }
 
 range_options = {
-    "1 Day": "1d", "5 Days": "5d", "1 Week": "7d", "1 Month": "1mo", "6 Months": "6mo", "1 Year": "1y"
+    "1 Day": "1d",
+    "1 Week": "7d",
+    "1 Month": "1mo",
+    "6 Months": "6mo",
+    "1 Year": "1y",
 }
 
 competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "HUT", "IREN", "MARA", "MTPLF", "RIOT", "WULF"]
@@ -796,7 +800,7 @@ if tab == "Bitcoin News":
         if selected_range == "1d":
             min_y = btc_low * .995
             max_y = btc_high * 1.005
-        elif selected_range == "5d":
+        elif selected_range == "7d":
             min_y = btc_low * 1.0
             max_y = btc_high * 1.0
         elif selected_range == "1mo":
