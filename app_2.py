@@ -793,9 +793,12 @@ if tab == "Bitcoin News":
         btc_low = btc_close["Price"].min()
         btc_high = btc_close["Price"].max()
 
-        if selected_range in ["1d", "5d"]:
+        if selected_range == "1d":
             min_y = btc_low * .995
             max_y = btc_high * 1.005
+        elif selected_range == "5d":
+            min_y = btc_low * 0.985
+            max_y = btc_high * 1.02
         elif selected_range == "1mo":
             min_y = btc_low * 0.985
             max_y = btc_high * 1.02
