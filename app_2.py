@@ -1349,29 +1349,27 @@ if tab == "Live Market":
     pill_options = ["Current Metrics"] + available_quarters
     quarter = st.pills("Select View:", pill_options, default=pill_options[0], key="quarter_selector")
 
+    with st.spinner("Loading competitor metrics…"):
+        is_current_metrics = (quarter == "Current Metrics")
 
-    is_current_metrics = (quarter == "Current Metrics")
+        if is_current_metrics:
+            start_date = end_date = None  # no filtering, show latest
+        else:
+            start_date, end_date = get_quarter_date_bounds(quarter)
 
-    if is_current_metrics:
-        start_date = end_date = None  # no filtering, show latest
-    else:
-        start_date, end_date = get_quarter_date_bounds(quarter)
+        st.caption(f"Data shown for: **{quarter} {datetime.now().year}** {'(live)' if is_current_metrics else '(locked)'}")
 
-    st.caption(f"Data shown for: **{quarter} {datetime.now().year}** {'(live)' if is_current_metrics else '(locked)'}")
-
-    df_rows = []
-    
-    for ticker in competitor_tickers:
-        cik = cik_map.get(ticker)
-        name = yf.Ticker(ticker).info.get("shortName", ticker)
-        row = {"Ticker": ticker, "Name": name}
-        sources_used = []
-        sec_data = {}
+        df_rows = []
+        for ticker in competitor_tickers:
+            cik = cik_map.get(ticker)
+            name = yf.Ticker(ticker).info.get("shortName", ticker)
+            row = {"Ticker": ticker, "Name": name}
+            sources_used = []
+            sec_data = {}
         if is_current_metrics:
             start_date = end_date = None  # allow full data access
         else:
             start_date, end_date = get_quarter_date_bounds(quarter)
-
 
         # Step 1: PRESS — only for "Current Metrics"
         if is_current_metrics:
@@ -1443,11 +1441,11 @@ if tab == "Live Market":
     for label in SEC_FACTS:
         if label in df.columns:
             if "Bitcoin" in label:
-                df[label] = df[label].apply(lambda x: f"{x:,.0f} BTC" if pd.notna(x) else "–")
+                df[label] = df[label].apply(lambda x: f"{x:,0f} BTC" if pd.notna(x) else "–")
             elif "EH/s" in label:
-                df[label] = df[label].apply(lambda x: f"{x:,.2f} EH/s" if pd.notna(x) else "–")
+                df[label] = df[label].apply(lambda x: f"{x:,2f} EH/s" if pd.notna(x) else "–")
             else:
-                df[label] = df[label].apply(lambda x: f"${x:,.2f}" if pd.notna(x) else "–")
+                df[label] = df[label].apply(lambda x: f"${x:,2f}" if pd.notna(x) else "–")
                     
     # Define formatting
     def get_formatter(col):
