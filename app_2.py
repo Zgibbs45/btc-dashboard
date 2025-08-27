@@ -139,6 +139,7 @@ SEC_FACTS = {
 
 range_options = {
     "1 Day": "1d",
+    "1 Week": "5d", 
     "1 Week": "7d",
     "1 Month": "1mo",
     "6 Months": "6mo",
