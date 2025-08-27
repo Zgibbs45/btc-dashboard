@@ -1366,86 +1366,82 @@ if tab == "Live Market":
             row = {"Ticker": ticker, "Name": name}
             sources_used = []
             sec_data = {}
-        if is_current_metrics:
-            start_date = end_date = None  # allow full data access
-        else:
-            start_date, end_date = get_quarter_date_bounds(quarter)
 
-        # Step 1: PRESS — only for "Current Metrics"
-        if is_current_metrics:
-            press = get_latest_press_release_metrics(name, ticker)
-            if press and press.get("url"):
-                press_date = press.get("date")
-                press_url = press.get("url")
-                for label, val_str in press["metrics"].items():
-                    try:
-                        val_clean = float(val_str.replace("$", "").replace(",", "").replace(" BTC", ""))
-                        sec_data[label] = val_clean
-                    except:
-                        pass
-                sources_used.append(("Press", press_date, press_url))
+            # quarter bounds (per your selection)
+            if is_current_metrics:
+                start_date = end_date = None
+            else:
+                start_date, end_date = get_quarter_date_bounds(quarter)
 
-        # Step 2: Fallback to single most recent SEC filing (only one accn)
-        fallback_tags = list(SEC_FACTS.values())
-        all_tags = [tag for tag_list in fallback_tags for tag in tag_list]
+            # 1) PRESS (only for Current Metrics)
+            if is_current_metrics:
+                press = get_latest_press_release_metrics(name, ticker)
+                if press and press.get("url"):
+                    press_date = press.get("date")
+                    press_url = press.get("url")
+                    for label, val_str in press["metrics"].items():
+                        try:
+                            # normalize to float first; ignore EH/s strings that don’t parse
+                            val_clean = float(
+                                val_str.replace("$", "").replace(",", "").replace(" BTC", "").strip()
+                            )
+                            sec_data[label] = val_clean
+                        except Exception:
+                            pass
+                    sources_used.append(("Press", press_date, press_url))
 
-        # Find the most recent available SEC filing used in any field
-        latest_accn = None
-        latest_date = None
-        latest_values = {}
+            # 2) SEC fallback (single most-recent filing)
+            latest_accn = None
+            latest_date = None
+            latest_values = {}
 
-        for label, tags in SEC_FACTS.items():
-            if label in sec_data:
-                continue  # Already filled by press
-            if not cik:
-                continue  # Skip if no CIK available for this ticker
-            val, date, accn = get_latest_sec_fact_with_fallback(
-                cik, tags, start_date=start_date, end_date=end_date
-            )
-            if val is not None and accn is not None:
-                if not latest_accn or date > latest_date:
-                    latest_accn = accn
-                    latest_date = date
-                latest_values[label] = (val, accn)
+            for label, tags in SEC_FACTS.items():
+                if label in sec_data or not cik:
+                    continue
+                val, date, accn = get_latest_sec_fact_with_fallback(
+                    cik, tags, start_date=start_date, end_date=end_date
+                )
+                if val is not None and accn is not None:
+                    if not latest_accn or date > latest_date:
+                        latest_accn = accn
+                        latest_date = date
+                    latest_values[label] = (val, accn)
 
-        # If a single SEC filing is available, pull all fallback fields from it only
-        if latest_accn:
-            accn_nodash = latest_accn.replace("-", "")
-            sec_url = get_latest_edgar_inline_url(cik)
-            for label, (val, accn) in latest_values.items():
-                if accn == latest_accn:
-                    sec_data[label] = val
-            sources_used.append(("SEC", latest_date, sec_url))
+            if latest_accn:
+                sec_url = get_latest_edgar_inline_url(cik)
+                for label, (val, accn) in latest_values.items():
+                    if accn == latest_accn:
+                        sec_data[label] = val
+                sources_used.append(("SEC", latest_date, sec_url))
 
-        # Fill row with final data
-        for label in SEC_FACTS.keys():
-            row[label] = sec_data.get(label, None)
+            # 3) finalize row
+            for label in SEC_FACTS.keys():
+                row[label] = sec_data.get(label, None)
 
-        # Final links
-        if sources_used:
-            link_list = []
-            for source, date, url in sorted(sources_used, key=lambda x: x[1], reverse=True):
-                if isinstance(url, str) and url.strip():
-                    safe_url = quote(url, safe=':/?=&')
-                    link_list.append(f'<a href="{safe_url}" target="_blank">{date} ({source})</a>')
+            if sources_used:
+                link_list = []
+                for source, date, url in sorted(sources_used, key=lambda x: x[1], reverse=True):
+                    if isinstance(url, str) and url.strip():
+                        safe_url = quote(url, safe=':/?=&')
+                        link_list.append(f'<a href="{safe_url}" target="_blank">{date} ({source})</a>')
+                row["Last Report"] = " • ".join(link_list) if link_list else "-"
+            else:
+                row["Last Report"] = "-"
 
-            row["Last Report"] = " • ".join(link_list) if link_list else "-"
-        else:
-            row["Last Report"] = "-"
-
-        df_rows.append(row)
+            df_rows.append(row)
 
     df = pd.DataFrame(df_rows)
     df.set_index("Ticker", inplace=True)
 
     for label in SEC_FACTS:
         if label in df.columns:
+            s = pd.to_numeric(df[label], errors="coerce")
             if "Bitcoin" in label:
-                df[label] = df[label].apply(lambda x: f"{x:,0f} BTC" if pd.notna(x) else "–")
+                df[label] = s.apply(lambda v: f"{v:,.0f} BTC" if pd.notna(v) else "–")
             elif "EH/s" in label:
-                df[label] = df[label].apply(lambda x: f"{x:,2f} EH/s" if pd.notna(x) else "–")
+                df[label] = s.apply(lambda v: f"{v:,.2f} EH/s" if pd.notna(v) else "–")
             else:
-                df[label] = df[label].apply(lambda x: f"${x:,2f}" if pd.notna(x) else "–")
+                df[label] = s.apply(lambda v: f"${v:,.2f}" if pd.notna(v) else "–")
                     
     # Define formatting
     def get_formatter(col):
