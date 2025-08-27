@@ -139,7 +139,6 @@ SEC_FACTS = {
 
 range_options = {
     "1 Day": "1d",
-    "5 Day": "5d", 
     "1 Week": "7d",
     "1 Month": "1mo",
     "6 Months": "6mo",
@@ -750,7 +749,7 @@ if tab == "Bitcoin News":
     btc = yf.Ticker("BTC-USD")
 
     st.subheader("📈 Bitcoin Market Stats")
-    btc_range_options = {k: v for k, v in range_options.items() if k != "5 Days"}
+    btc_range_options = range_options  # show 1 Day / 1 Week / 1 Month / 6 Months / 1 Year
     sel = st.pills("Bitcoin price range:", options=list(btc_range_options.keys()), default="1 Day", key="btc_range")
     selected_range = btc_range_options.get(sel, "1mo")
     data = get_history(btc, selected_range)
@@ -788,6 +787,15 @@ if tab == "Bitcoin News":
         if selected_range == "1d":
             btc_close.set_index("Date", inplace=True)
             btc_close = btc_close.resample("30min").first().dropna().reset_index()
+            # Fallback: if resample produced <2 points, use raw 5m data
+            if len(btc_close) < 2:
+                raw = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
+                raw.columns = ["Date", "Price"]
+                raw["Date"] = pd.to_datetime(raw["Date"])
+                if raw["Date"].dt.tz is None:
+                    raw["Date"] = raw["Date"].dt.tz_localize("UTC")
+                raw["Date"] = raw["Date"].dt.tz_convert("US/Pacific")
+                btc_close = raw
 
         # Optional trim for 1 Week
         if sel == "1 Week":
@@ -992,10 +1000,10 @@ if tab == "Live Market":
             sym = "CLSK"
         
         with m2:
-            market_range_options = {k: v for k, v in range_options.items() if k != "1 Week"}
+            market_range_options = range_options  # include 1 Week
             lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), default="1 Day", key="lookup_range")
             selected_range = market_range_options.get(lookup_range, "1mo")
-            extended_range = "10d" if lookup_range == "5 Days" else selected_range
+            extended_range = selected_range
 
         # Fetch data for selected ticker
         ticker_obj = yf.Ticker(sym)
@@ -1130,7 +1138,7 @@ if tab == "Live Market":
                     stock_low = df["Low"].min()
                     stock_high = df["High"].max()
                     
-                    if selected_range in ["1d", "5d"]:
+                    if selected_range in ["1d", "7d"]:
                         min_y = stock_low * 0.99
                         max_y = stock_high * 1.01
                     elif selected_range == "1mo":
