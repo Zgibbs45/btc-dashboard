@@ -1314,6 +1314,11 @@ if tab == "Live Market":
             ),
             y=alt.Y("Price:Q", scale=y_scale),
             color="Ticker:N",
+            tooltip=[
+                alt.Tooltip("TimeET:N", title="Time (ET)" if comp_selected_period == "1d" else "Date"),
+                alt.Tooltip("Price:Q", format=".2f"),
+                alt.Tooltip("Ticker:N"),
+            ],
         )
 
         tooltip_title = "Time (ET)" if comp_selected_period == "1d" else "Date"
