@@ -1178,16 +1178,24 @@ if tab == "Live Market":
                             x=x_axis,
                             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y])),
                             tooltip=[
-                                alt.Tooltip("Label:N", title="Time (ET)" if selected_range == "1d" else "Date"),
-                                alt.Tooltip("Price:Q", format=".2f")
+                                alt.Tooltip(
+                                    "Date:T",
+                                    title="Time (ET)" if selected_range == "1d" else "Date",
+                                    format="%I:%M %p" if selected_range == "1d" else "%b %d",
+                                ),
+                                alt.Tooltip("Price:Q", format=".2f"),
                             ]
                         ),
                         alt.Chart(stock_close).mark_circle(size=40).encode(
                             x="Date:T",
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip("Label:N", title="Time (ET)" if selected_range == "1d" else "Date"),
-                                alt.Tooltip("Price:Q", format=".2f")
+                                alt.Tooltip(
+                                    "Date:T",
+                                    title="Time (ET)" if selected_range == "1d" else "Date",
+                                    format="%I:%M %p" if selected_range == "1d" else "%b %d",
+                                ),
+                                alt.Tooltip("Price:Q", format=".2f"),
                             ]
                         )
                     ).properties(
@@ -1332,7 +1340,11 @@ if tab == "Live Market":
             y="Price:Q",
             color="Ticker:N",
             tooltip=[
-                alt.Tooltip("TimeET:N", title=tooltip_title),
+                alt.Tooltip(
+                    "Date:T",
+                    title=tooltip_title,
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
+                ),
                 alt.Tooltip("Price:Q", format=".2f"),
                 alt.Tooltip("Ticker:N"),
             ],
