@@ -794,8 +794,13 @@ if tab == "Bitcoin News":
         btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Pacific")
         btc_close["Label"] = btc_close["Date"].dt.strftime("%I:%M %p")
         if selected_range == "1d":
-            btc_close.set_index("Date", inplace=True)
-            btc_close = btc_close.resample("30min").first().dropna().reset_index()
+            btc_close = (
+                btc_close
+                .set_index("Date")
+                .resample("30min", label="right", closed="right")
+                .ffill()              # keep the latest known price in each 30m bucket
+                .reset_index()
+            )
             # Fallback: if resample produced <2 points, use raw 5m data
             if len(btc_close) < 2:
                 raw = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
