@@ -795,7 +795,7 @@ if tab == "Bitcoin News":
         btc_close.columns = ["Date", "Price"]
         btc_close["Price"] = btc_close["Price"].round(2)
 
-        # Convert to EST
+        # Convert to ET
         btc_close["Date"] = pd.to_datetime(btc_close["Date"])
         if btc_close["Date"].dt.tz is None:
             btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
@@ -847,10 +847,10 @@ if tab == "Bitcoin News":
             btc_close["Label"] = btc_close["Date"].dt.strftime("%-I:%M %p")
             x_axis = alt.X(
                 "Date:T",
-                title="Time (PST)",
+                title="Time (PT)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p")
             )
-            tooltip_title = "Time (PST)"
+            tooltip_title = "Time (PT)"
         else:
             btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
             x_axis = alt.X(
@@ -1147,7 +1147,7 @@ if tab == "Live Market":
                     
                     x_axis = alt.X(
                         "Date:T",
-                        title="Time (EST)" if selected_range == "1d" else "Date",
+                        title="Time (ET)" if selected_range == "1d" else "Date",
                         axis=alt.Axis(
                             labelAngle=45 if selected_range == "1d" else 0,
                             format="%I:%M %p" if selected_range == "1d" else "%b %d"
@@ -1182,7 +1182,7 @@ if tab == "Live Market":
                             x="Date:T",
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip("Label:N", title="Time (EST)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("Label:N", title="Time (ET)" if selected_range == "1d" else "Date"),
                                 alt.Tooltip("Price:Q", format=".2f")
                             ]
                         )
@@ -1276,58 +1276,57 @@ if tab == "Live Market":
         chart_df = combined_df.reset_index()
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
 
-        # Convert to Pacific Time (tz-aware)
+        # Convert to Eastern Time (tz-aware)
         chart_df["Date"] = pd.to_datetime(chart_df["Date"])
         if chart_df["Date"].dt.tz is None:
             chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
-        chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Pacific")
+        chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
 
-        # Reshape to long form
+        # Reshape to long form (unchanged)
         chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
 
-        # Format time for tooltip
+        # Format time for tooltip (ET)
         if comp_selected_period == "1d":
-            chart_df["TimeEST"] = chart_df["Date"].dt.strftime("%I:%M %p")
-            time_title = "Time (EST)"
+            chart_df["TimeET"] = chart_df["Date"].dt.strftime("%I:%M %p")
         else:
-            chart_df["TimeEST"] = chart_df["Date"].dt.strftime("%b %d")
-            time_title = "Date"
+            chart_df["TimeET"] = chart_df["Date"].dt.strftime("%b %d")
+
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df.dropna(subset=["Price"], inplace=True)
         chart_df["Price"] = chart_df["Price"].round(2)
 
-        # Calculate Y-axis bounds
+        # Y-axis bounds (keep your math)
         min_y = chart_df["Price"].min() * 0.99
         max_y = chart_df["Price"].max() * 1.01
         y_scale = alt.Scale(domain=[min_y, max_y]) if not math.isnan(min_y) else alt.Scale()
 
         label_angle = 45 if comp_selected_period == "1d" else 0
 
-        # Build chart
+        # Build chart (ET labels)
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
                 "Date:T",
-                title="Time (EST)" if comp_selected_period == "1d" else "Date",
+                title="Time (ET)" if comp_selected_period == "1d" else "Date",
                 axis=alt.Axis(
                     labelAngle=label_angle,
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d"
-                )
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
+                ),
             ),
             y=alt.Y("Price:Q", scale=y_scale),
-            color="Ticker:N"
+            color="Ticker:N",
         )
 
-        tooltip_title = "Time (EST)" if comp_selected_period == "1d" else "Date"
+        tooltip_title = "Time (ET)" if comp_selected_period == "1d" else "Date"
 
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
             x="Date:T",
             y="Price:Q",
             color="Ticker:N",
             tooltip=[
-                alt.Tooltip("TimeEST:N", title=tooltip_title),
+                alt.Tooltip("TimeET:N", title=tooltip_title),
                 alt.Tooltip("Price:Q", format=".2f"),
-                alt.Tooltip("Ticker:N")
-            ]
+                alt.Tooltip("Ticker:N"),
+            ],
         )
 
         st.altair_chart((line + points).properties(
