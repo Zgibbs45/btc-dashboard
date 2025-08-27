@@ -202,6 +202,14 @@ def get_coingecko_btc_data():
         st.text(f"Error: {e}")
         return {}
 
+@st.cache_data(ttl=90, show_spinner=False)  # ~90s is fresh enough for intraday
+def history_cached(symbol: str, *, period=None, interval="1d", start=None, end=None):
+    """Centralized, memoized wrapper around yfinance.history."""
+    try:
+        return yf.Ticker(symbol).history(period=period, interval=interval, start=start, end=end)
+    except Exception:
+        return pd.DataFrame()
+
 def get_history(_ticker, period):
     if period == "1d":
         now = datetime.now(ZoneInfo("UTC"))
@@ -213,7 +221,7 @@ def get_history(_ticker, period):
         return df
     else:
         interval = "5m" if period == "1d" else "1d"  # keeps older callers safe
-        return _ticker.history(period=period, interval=interval)
+        return history_cached(_ticker.ticker, period=period, interval=interval)
 
 @st.cache_data(ttl=1800) # 30 minutes
 def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=30, page=1, domains=None):
@@ -410,7 +418,7 @@ def fetch_comp_price_series(ticker, period):
         else:
             interval = "1d"
 
-        df = yf.Ticker(ticker).history(period=period, interval=interval)
+        df = history_cached(ticker, period=period, interval=interval)
         df = df[["Close"]].rename(columns={"Close": ticker})
         df.index = pd.to_datetime(df.index)
         return df
@@ -761,7 +769,8 @@ if tab == "Bitcoin News":
     btc_range_options = range_options  # show 1 Day / 1 Week / 1 Month / 6 Months / 1 Year
     sel = st.pills("Bitcoin price range:", options=list(btc_range_options.keys()), default="1 Day", key="btc_range")
     selected_range = btc_range_options.get(sel, "1mo")
-    data = get_history(btc, selected_range)
+    with st.spinner("Loading BTC price…"):
+        data = get_history(btc, selected_range)
 
     if not data.empty:
         m1, m2, m3 = st.columns([.80, 1.20, 1])
@@ -1101,7 +1110,8 @@ if tab == "Live Market":
             st.markdown(render_metric_block("CLSK Low", clsk_low), unsafe_allow_html=True)
         
         interval = "5m" if selected_range == "1d" else "1d"
-        df = ticker_obj.history(period=extended_range, interval=interval)
+        with st.spinner(f"Loading {sym} price…"):
+            df = history_cached(sym, period=extended_range, interval=interval)
         
         if lookup_range == "1 Day":
             pass
