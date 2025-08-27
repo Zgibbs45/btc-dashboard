@@ -203,8 +203,17 @@ def get_coingecko_btc_data():
         return {}
 
 def get_history(_ticker, period):
-    interval = "5m" if period == "1d" else "1d"
-    return _ticker.history(period=period, interval=interval)
+    if period == "1d":
+        now = datetime.now(ZoneInfo("UTC"))
+        start = now - timedelta(hours=24)
+        df = _ticker.history(start=start, end=now, interval="5m")
+        # Fallback in case provider returns nothing momentarily
+        if df is None or df.empty:
+            df = _ticker.history(period="1d", interval="5m")
+        return df
+    else:
+        interval = "5m" if period == "1d" else "1d"  # keeps older callers safe
+        return _ticker.history(period=period, interval=interval)
 
 @st.cache_data(ttl=1800) # 30 minutes
 def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=30, page=1, domains=None):
