@@ -795,7 +795,7 @@ if tab == "Bitcoin News":
         btc_close.columns = ["Date", "Price"]
         btc_close["Price"] = btc_close["Price"].round(2)
 
-        # Convert to ET
+        # Convert to PT
         btc_close["Date"] = pd.to_datetime(btc_close["Date"])
         if btc_close["Date"].dt.tz is None:
             btc_close["Date"] = btc_close["Date"].dt.tz_localize("UTC")
@@ -1128,8 +1128,8 @@ if tab == "Live Market":
         else:
             # Format large numbers
             def fmt_float(val): return f"{val:.2f}" if val is not None else "N/A"
-            def fmt_millions(val): return f"{val/1_000_000:.2f} M" if val else "N/A"
-            def fmt_billions(val): return f"{val/1_000_000_000:.2f} B" if val else "N/A"
+            def fmt_millions(val): return f"{val/1_000_000:.2f} M" if val is not None else "N/A"
+            def fmt_billions(val): return f"{val/1_000_000_000:.2f} B" if val is not None else "N/A"
             st.markdown("<hr>", unsafe_allow_html=True)
             try:
                 interval = "5m" if selected_range == "1d" else "1d"
@@ -1176,7 +1176,11 @@ if tab == "Live Market":
                     stock_chart = alt.layer(
                         alt.Chart(stock_close).mark_line().encode(
                             x=x_axis,
-                            y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y]))
+                            y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y])),
+                            tooltip=[
+                                alt.Tooltip("Label:N", title="Time (ET)" if selected_range == "1d" else "Date"),
+                                alt.Tooltip("Price:Q", format=".2f")
+                            ]
                         ),
                         alt.Chart(stock_close).mark_circle(size=40).encode(
                             x="Date:T",
@@ -1215,7 +1219,7 @@ if tab == "Live Market":
         st.markdown("<hr>", unsafe_allow_html=True)
 
 
-    st.subheader("Live Competiton View")
+    st.subheader("Live Competition View")
     competitors = get_competitor_prices(competitor_tickers)
 
     m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12, m13= st.columns(13)
