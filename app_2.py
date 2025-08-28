@@ -4,6 +4,7 @@ import requests
 import yfinance as yf
 import base64
 import os
+import pytz
 import time
 import re
 import html
@@ -100,6 +101,9 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+ET = pytz.timezone("America/New_York")
+
 
 NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
 TWITTER_BEARER_TOKEN = st.secrets["TWITTER_BEARER_TOKEN"]
@@ -409,6 +413,31 @@ def get_competitor_prices(symbols):
             continue
 
     return results
+
+@st.cache_data(ttl=300)  # cache 5 minutes to avoid hitting rate limits
+def fetch_btc_market_stats():
+    url = (
+        "https://api.coingecko.com/api/v3/coins/bitcoin"
+        "?localization=false&tickers=false&market_data=true"
+        "&community_data=false&developer_data=false&sparkline=false"
+    )
+    r = requests.get(url, timeout=15)
+    r.raise_for_status()
+    data = r.json()
+    md = data["market_data"]
+
+    # Fallback to the known 21M cap if API returns null
+    max_supply = md.get("max_supply") or 21_000_000
+
+    return {
+        "price_usd": md["current_price"]["usd"],
+        "market_cap_usd": md["market_cap"]["usd"],
+        "volume_24h_usd": md["total_volume"]["usd"],
+        "circulating_supply": md["circulating_supply"],
+        "total_supply": md.get("total_supply"),
+        "max_supply": max_supply,
+        "last_updated": data.get("last_updated"),  # ISO8601 in UTC
+    }
 
 @st.cache_data(ttl=600)
 def fetch_comp_price_series(ticker, period):
@@ -773,24 +802,43 @@ if tab == "Bitcoin News":
         data = get_history(btc, selected_range)
 
     if not data.empty:
-        m1, m2, m3 = st.columns([.80, 1.20, 1])
-        with m1:
-            st.metric(
-                "Bitcoin Price (USD)",
-                f"${btc_metrics.get('price', 0):,.2f}",
-                f"{btc_metrics.get('change', 0):.2f}%"
-            )
-        with m2:
-            st.metric(
-                "Market Cap",
-                f"${btc_metrics.get('market_cap', 0):,.0f}"
-            )
-        with m3:
-            st.metric(
-                "24h Volume",
-                f"${btc_metrics.get('volume', 0):,.0f}"
-            )
-            
+        stats = fetch_btc_market_stats()
+
+        # Format helpers
+        def fmt_btc(n): 
+            return f"{n:,.0f} BTC" if n is not None else "—"
+
+        def fmt_usd(n):
+            return f"${n:,.0f}" if n is not None else "—"
+
+        def fmt_time_et(iso):
+            try:
+                ts = pd.to_datetime(iso, utc=True).tz_convert(ET)
+                return ts.strftime("%Y-%m-%d %I:%M %p ET")
+            except Exception:
+                return "—"
+
+        circulating = stats["circulating_supply"] or 0
+        max_supply  = stats["max_supply"] or 21_000_000
+        pct_mined   = (circulating / max_supply * 100) if max_supply else None
+
+        st.subheader("Market Stats")
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Price (USD)", f"{stats['price_usd']:,.2f}")
+        c2.metric("Circulating Supply", fmt_btc(circulating))
+        c3.metric("Max Supply", fmt_btc(max_supply))
+        c4.metric("Market Cap", fmt_usd(stats["market_cap_usd"]))
+
+        # Optional extras (uncomment if you want them visible)
+        # c5, c6 = st.columns(2)
+        # c5.metric("24h Volume", fmt_usd(stats["volume_24h_usd"]))
+        # c6.metric("% of Max Mined", f"{pct_mined:.2f}%" if pct_mined is not None else "—")
+
+        # Visual hint for progress toward max supply (optional)
+        # st.progress(min(1.0, circulating / max_supply) if max_supply else 0.0)
+
+        st.caption(f"As of {fmt_time_et(stats['last_updated'])}")
         btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
         btc_close["Price"] = btc_close["Price"].round(2)
