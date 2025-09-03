@@ -850,6 +850,8 @@ if tab == "Bitcoin News":
         
         btc_close["Date"] = btc_close["Date"].dt.tz_convert("US/Pacific")
         btc_close["Label"] = btc_close["Date"].dt.strftime("%I:%M %p")
+        if selected_range != "1d":
+            btc_close["Date_Day"] = btc_close["Date"].dt.normalize()
         if selected_range == "1d":
             btc_close = (
                 btc_close
@@ -901,7 +903,7 @@ if tab == "Bitcoin News":
             tooltip_title = "Time (PT)"
         else:
             x_axis = alt.X(
-                "Date:T",
+                "Date_Day:T",
                 title="Date",
                 scale=alt.Scale(nice="day"),
                 axis=alt.Axis(
@@ -919,16 +921,16 @@ if tab == "Bitcoin News":
         )
 
         points = alt.Chart(btc_close).mark_circle(size=40).encode(
-            x="Date:T",
+            x=alt.X("Date:T") if selected_range == "1d" else alt.X("Date_Day:T"),
             y="Price:Q",
             tooltip=[
                 alt.Tooltip(
-                    "Date:T",
-                    title=tooltip_title,  # "Time (PT)" for 1d, "Date" otherwise (already set above)
+                    "Date:T" if selected_range == "1d" else "Date_Day:T",
+                    title=tooltip_title,
                     format="%I:%M %p" if selected_range == "1d" else "%b %d",
                 ),
                 alt.Tooltip("Price:Q", format=".2f"),
-            ]
+            ],
         )
 
         chart = (line + points).properties(
