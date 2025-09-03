@@ -1212,14 +1212,26 @@ if tab == "Live Market":
                         stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
                     stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
                     stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
+
+                    if selected_range != "1d":
+                        stock_close["Date_Day"] = stock_close["Date"].dt.normalize()
+
+                    if selected_range == "1y":
+                        stock_close = stock_close.sort_values("Date" if "Date_Day" not in stock_close else "Date_Day").reset_index(drop=True)
+                        keep = list(range(0, len(stock_close), 2))
+                        if keep and keep[-1] != len(stock_close) - 1:
+                            keep.append(len(stock_close) - 1)
+                        stock_close = stock_close.iloc[keep].copy()
                     
                     x_axis = alt.X(
-                        "Date:T",
+                        "Date:T" if selected_range == "1d" else "Date_Day:T",
                         title="Time (ET)" if selected_range == "1d" else "Date",
+                        scale=None if selected_range == "1d" else alt.Scale(nice="day"),
                         axis=alt.Axis(
                             labelAngle=45 if selected_range == "1d" else 0,
-                            format="%I:%M %p" if selected_range == "1d" else "%b %d"
-                        )
+                            format="%I:%M %p" if selected_range == "1d" else "%b %d",
+                            tickCount=None if selected_range == "1d" else {"interval": "day", "step": 1},
+                        ),
                     )
 
                     
@@ -1254,24 +1266,38 @@ if tab == "Live Market":
                                 alt.Tooltip("Price:Q", format=".2f"),
                             ]
                         ),
+                        # inside alt.layer(...):
                         alt.Chart(stock_close).mark_circle(size=40).encode(
-                            x="Date:T",
+                            x=alt.X("Date:T") if selected_range == "1d" else alt.X("Date_Day:T"),
                             y="Price:Q",
                             tooltip=[
                                 alt.Tooltip(
-                                    "Date:T",
+                                    "Date:T" if selected_range == "1d" else "Date_Day:T",
                                     title="Time (ET)" if selected_range == "1d" else "Date",
                                     format="%I:%M %p" if selected_range == "1d" else "%b %d",
                                 ),
-                                alt.Tooltip("Price:Q", format=".2f"),
-                            ]
+                                alt.Tooltip("Price:Q", format=",.2f"),
+                            ],
                         )
+
                     ).properties(
                         width="container",
                         height=400,
                         title=f"{sym} Price"
                     )
-                    
+
+                    points = alt.Chart(stock_close).mark_circle(size=40).encode(
+                        x=alt.X("Date:T") if selected_range == "1d" else alt.X("Date_Day:T"),
+                        y="Price:Q",
+                        tooltip=[
+                            alt.Tooltip(
+                                "Date:T" if selected_range == "1d" else "Date_Day:T",
+                                title="Time (ET)" if selected_range == "1d" else "Date",
+                                format="%I:%M %p" if selected_range == "1d" else "%b %d",
+                            ),
+                            alt.Tooltip("Price:Q", format=",.2f"),
+                        ],
+                    )
                     st.altair_chart(stock_chart, use_container_width=True)
 
                     
@@ -1362,8 +1388,23 @@ if tab == "Live Market":
             chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
         chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
 
-        # Reshape to long form (unchanged)
-        chart_df = chart_df.melt(id_vars=["Date"], var_name="Ticker", value_name="Price")
+        if comp_selected_period != "1d":
+            chart_df["Date_Day"] = chart_df["Date"].dt.normalize()
+
+        # Keep Date_Day when present so axis/points align
+        id_vars = ["Date"] + (["Date_Day"] if comp_selected_period != "1d" else [])
+        chart_df = chart_df.melt(id_vars=id_vars, var_name="Ticker", value_name="Price")
+
+        # Thin ONLY the 1-year view (~50% fewer points), per ticker, keeping each ticker's last point
+        if comp_selected_period == "1y":
+            order_col = "Date_Day" if comp_selected_period != "1d" else "Date"
+            chart_df = (chart_df
+                .sort_values(["Ticker", order_col])
+                .assign(_n=lambda d: d.groupby("Ticker").cumcount())
+            )
+            last_n = chart_df.groupby("Ticker")["_n"].transform("max")
+            chart_df = chart_df[(chart_df["_n"] % 2 == 0) | (chart_df["_n"] == last_n)].drop(columns="_n")
+
 
         # Format time for tooltip (ET)
         if comp_selected_period == "1d":
@@ -1385,18 +1426,24 @@ if tab == "Live Market":
         # Build chart (ET labels)
         line = alt.Chart(chart_df).mark_line().encode(
             x=alt.X(
-                "Date:T",
+                "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
                 title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                scale=None if comp_selected_period == "1d" else alt.Scale(nice="day"),
                 axis=alt.Axis(
-                    labelAngle=label_angle,
+                    labelAngle=45 if comp_selected_period == "1d" else 0,
                     format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
+                    tickCount=None if comp_selected_period == "1d" else {"interval": "day", "step": 1},
                 ),
             ),
             y=alt.Y("Price:Q", scale=y_scale),
             color="Ticker:N",
             tooltip=[
-                alt.Tooltip("TimeET:N", title="Time (ET)" if comp_selected_period == "1d" else "Date"),
-                alt.Tooltip("Price:Q", format=".2f"),
+                alt.Tooltip(
+                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
+                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
+                ),
+                alt.Tooltip("Price:Q", format=",.2f"),
                 alt.Tooltip("Ticker:N"),
             ],
         )
@@ -1404,16 +1451,16 @@ if tab == "Live Market":
         tooltip_title = "Time (ET)" if comp_selected_period == "1d" else "Date"
 
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
-            x="Date:T",
+            x=alt.X("Date:T") if comp_selected_period == "1d" else alt.X("Date_Day:T"),
             y="Price:Q",
             color="Ticker:N",
             tooltip=[
                 alt.Tooltip(
-                    "Date:T",
-                    title=tooltip_title,
+                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
+                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
                     format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
                 ),
-                alt.Tooltip("Price:Q", format=".2f"),
+                alt.Tooltip("Price:Q", format=",.2f"),
                 alt.Tooltip("Ticker:N"),
             ],
         )
