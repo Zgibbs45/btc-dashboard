@@ -922,8 +922,12 @@ if tab == "Bitcoin News":
             x="Date:T",
             y="Price:Q",
             tooltip=[
-                alt.Tooltip("Label:N", title=tooltip_title),
-                alt.Tooltip("Price:Q", format=".2f")
+                alt.Tooltip(
+                    "Date:T",
+                    title=tooltip_title,  # "Time (PT)" for 1d, "Date" otherwise (already set above)
+                    format="%I:%M %p" if selected_range == "1d" else "%b %d",
+                ),
+                alt.Tooltip("Price:Q", format=".2f"),
             ]
         )
 
