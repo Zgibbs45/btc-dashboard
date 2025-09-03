@@ -900,11 +900,15 @@ if tab == "Bitcoin News":
             )
             tooltip_title = "Time (PT)"
         else:
-            btc_close["Label"] = btc_close["Date"].dt.strftime("%b %d")
             x_axis = alt.X(
                 "Date:T",
                 title="Date",
-                axis=alt.Axis(labelAngle=45, format="%b %d")
+                scale=alt.Scale(nice="day"),
+                axis=alt.Axis(
+                    labelAngle=45,
+                    format="%b %d",
+                    tickCount={"interval": "day", "step": 1},  # one tick per day
+                ),
             )
             tooltip_title = "Date"
 
