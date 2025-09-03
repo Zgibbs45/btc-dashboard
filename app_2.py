@@ -1223,18 +1223,6 @@ if tab == "Live Market":
                             keep.append(len(stock_close) - 1)
                         stock_close = stock_close.iloc[keep].copy()
                     
-                    x_axis = alt.X(
-                        "Date:T" if selected_range == "1d" else "Date_Day:T",
-                        title="Time (ET)" if selected_range == "1d" else "Date",
-                        scale=None if selected_range == "1d" else alt.Scale(nice="day"),
-                        axis=alt.Axis(
-                            labelAngle=45 if selected_range == "1d" else 0,
-                            format="%I:%M %p" if selected_range == "1d" else "%b %d",
-                            tickCount=None if selected_range == "1d" else {"interval": "day", "step": 1},
-                        ),
-                    )
-
-                    
                     # Sort and trim if needed
                     stock_close.sort_values("Date", inplace=True)
                     
@@ -1252,6 +1240,23 @@ if tab == "Live Market":
                         min_y = stock_low * 0.88
                         max_y = stock_high * 1.05
                     
+                    if selected_range == "1d":
+                        x_axis = alt.X(
+                            "Date:T",
+                            title="Time (ET)",
+                            axis=alt.Axis(labelAngle=45, format="%I:%M %p")
+                        )
+                    else:
+                        x_axis = alt.X(
+                            "Date_Day:T",
+                            title="Date",
+                            scale=alt.Scale(nice="day"),
+                            axis=alt.Axis(
+                                format="%b %d",
+                                tickCount={"interval": "day", "step": 1},
+                            ),
+                        )
+                        
                     # Build chart
                     stock_chart = alt.layer(
                         alt.Chart(stock_close).mark_line().encode(
