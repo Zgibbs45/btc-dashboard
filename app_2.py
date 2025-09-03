@@ -1259,11 +1259,11 @@ if tab == "Live Market":
                             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y])),
                             tooltip=[
                                 alt.Tooltip(
-                                    "Date:T",
+                                    "Date:T" if selected_range == "1d" else "Date_Day:T",
                                     title="Time (ET)" if selected_range == "1d" else "Date",
                                     format="%I:%M %p" if selected_range == "1d" else "%b %d",
                                 ),
-                                alt.Tooltip("Price:Q", format=".2f"),
+                                alt.Tooltip("Price:Q", format=",.2f"),
                             ]
                         ),
                         # inside alt.layer(...):
