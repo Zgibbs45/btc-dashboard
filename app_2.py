@@ -1244,7 +1244,8 @@ if tab == "Live Market":
                         x_axis = alt.X(
                             "Date:T",
                             title="Time (ET)",
-                            axis=alt.Axis(labelAngle=45, format="%I:%M %p")
+                            axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
+                            scale=None,
                         )
                     else:
                         x_axis = alt.X(
@@ -1456,7 +1457,40 @@ if tab == "Live Market":
                 alt.Tooltip("Ticker:N"),
             ],
         )
+        
+        if comp_selected_period == "1d":
+            x_axis_comp = alt.X(
+                "Date:T",
+                title="Time (ET)",
+                axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
+                scale=None,
+            )
+        else:
+            x_axis_comp = alt.X(
+                "Date_Day:T",
+                title="Date",
+                scale=alt.Scale(nice="day"),
+                axis=alt.Axis(
+                    labelAngle=0,
+                    format="%b %d",
+                    tickCount={"interval": "day", "step": 1},
+                ),
+            )
 
+        line = alt.Chart(chart_df).mark_line().encode(
+            x=x_axis_comp,
+            y=alt.Y("Price:Q", scale=y_scale),
+            color="Ticker:N",
+            tooltip=[
+                alt.Tooltip(
+                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
+                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
+                ),
+                alt.Tooltip("Price:Q", format=",.2f"),
+                alt.Tooltip("Ticker:N"),
+            ],
+        )
         st.altair_chart((line + points).properties(
             width="container",
             height=400,
