@@ -852,6 +852,16 @@ if tab == "Bitcoin News":
         btc_close["Label"] = btc_close["Date"].dt.strftime("%I:%M %p")
         if selected_range != "1d":
             btc_close["Date_Day"] = btc_close["Date"].dt.normalize()
+        if selected_range == "1y":
+            # make sure rows are in time order
+            btc_close = btc_close.sort_values("Date_Day").reset_index(drop=True)
+
+            # keep every other row, but always include the last point
+            keep_idx = list(range(0, len(btc_close), 2))
+            if keep_idx and keep_idx[-1] != len(btc_close) - 1:
+                keep_idx.append(len(btc_close) - 1)
+
+            btc_close = btc_close.iloc[keep_idx].copy()
         if selected_range == "1d":
             btc_close = (
                 btc_close
