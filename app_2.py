@@ -1411,7 +1411,16 @@ if tab == "Live Market":
         chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
 
         if comp_selected_period != "1d":
-            chart_df["Date_Day"] = chart_df["Date"].dt.normalize()
+            # daily ranges: keep the *calendar day in ET*, then drop tz
+            chart_df["Date_Day"] = (
+                chart_df["Date"]
+                .dt.normalize()         # midnight ET
+                .dt.tz_localize(None)   # make it tz-naive so Altair won't shift to UTC
+            )
+
+        # Sort by the same column we’ll plot on X
+        order_col = "Date" if comp_selected_period == "1d" else "Date_Day"
+        chart_df.sort_values(["Ticker", order_col], inplace=True)
 
         # Keep Date_Day when present so axis/points align
         id_vars = ["Date"] + (["Date_Day"] if comp_selected_period != "1d" else [])
