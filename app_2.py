@@ -1324,6 +1324,17 @@ if tab == "Live Market":
                         title=f"{sym} Price"
                     )
 
+                    points = alt.Chart(stock_close).mark_circle(size=40).encode(
+                        x=x_axis,                      # <— use the same x spec as the line
+                        y="Price:Q",
+                        tooltip=[
+                            alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
+                                        title="Time (ET)" if selected_range == "1d" else "Date",
+                                        format="%I:%M %p" if selected_range == "1d" else "%b %d"),
+                            alt.Tooltip("Price:Q", format=",.2f"),
+                        ],
+                    )
+
                     st.altair_chart(stock_chart, use_container_width=True)
                     
                 else:
