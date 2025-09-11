@@ -1226,14 +1226,25 @@ if tab == "Live Market":
                     stock_close["Date"] = pd.to_datetime(stock_close["Date"])
 
                     if selected_range == "1d":
-                        # intraday: make it ET-aware for time-of-day charting
+                        # intraday: ET-aware
                         if stock_close["Date"].dt.tz is None:
                             stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
                         stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
                         stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
                     else:
-                        # daily ranges: DO NOT timezone-shift; align points to the day ticks
-                        stock_close["Date_Day"] = stock_close["Date"].dt.normalize()
+                        # daily ranges: align the CALENDAR DAY to ET, then drop tz so Altair won’t shift to UTC
+                        if stock_close["Date"].dt.tz is None:
+                            stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
+                        stock_close["Date_Day"] = (
+                            stock_close["Date"]
+                            .dt.tz_convert("US/Eastern")  # move to ET first
+                            .dt.normalize()                # midnight ET
+                            .dt.tz_localize(None)          # strip tz to avoid Vega-Lite UTC shifts
+                        )
+
+                    # sort by the same column you plot on the x-axis
+                    order_col = "Date" if selected_range == "1d" else "Date_Day"
+                    stock_close.sort_values(order_col, inplace=True)
 
                     if selected_range != "1d":
                         stock_close["Date_Day"] = stock_close["Date"].dt.normalize()
