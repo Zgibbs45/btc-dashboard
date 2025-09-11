@@ -851,7 +851,7 @@ if tab == "Bitcoin News":
             c4.metric("Market Cap", fmt_usd(stats["market_cap_usd"]))
         # st.caption shows ET time; your BTC chart remains PT by design
             st.caption(f"As of {fmt_time_et(stats['last_updated'])}")
-            
+
         btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
         btc_close["Price"] = btc_close["Price"].round(2)
@@ -1224,10 +1224,16 @@ if tab == "Live Market":
                     
                     # Timezone handling and tooltip formatting
                     stock_close["Date"] = pd.to_datetime(stock_close["Date"])
-                    if stock_close["Date"].dt.tz is None:
-                        stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
-                    stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
-                    stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
+
+                    if selected_range == "1d":
+                        # intraday: make it ET-aware for time-of-day charting
+                        if stock_close["Date"].dt.tz is None:
+                            stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
+                        stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
+                        stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
+                    else:
+                        # daily ranges: DO NOT timezone-shift; align points to the day ticks
+                        stock_close["Date_Day"] = stock_close["Date"].dt.normalize()
 
                     if selected_range != "1d":
                         stock_close["Date_Day"] = stock_close["Date"].dt.normalize()
