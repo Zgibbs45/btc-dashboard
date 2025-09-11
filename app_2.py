@@ -317,23 +317,23 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     data = response.json()
     tweets = data.get("data", [])
 
-    cutoff = datetime.now(ZoneInfo("UTC")).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=max_age_days)
+    cutoff = datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)
     today = datetime.now(ZoneInfo("UTC")).date()
     
     if max_age_days > 1:
+    # keep anything within the rolling N-day window
         filtered = []
         for t in tweets:
             if "created_at" not in t:
                 continue
             dt = parse_date(t["created_at"])
-            if dt >= cutoff and dt.date() != today:
+            if dt >= cutoff:
                 filtered.append(t)
         tweets = filtered
     else:
         tweets = [
             t for t in tweets
-            if "created_at" in t
-            and parse_date(t["created_at"]) >= cutoff
+            if "created_at" in t and parse_date(t["created_at"]) >= cutoff
         ]
 
     users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
@@ -1244,8 +1244,7 @@ if tab == "Live Market":
                         x_axis = alt.X(
                             "Date:T",
                             title="Time (ET)",
-                            axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
-                            scale=None,
+                            axis=alt.Axis(labelAngle=45, format="%I:%M %p")
                         )
                     else:
                         x_axis = alt.X(
@@ -1415,31 +1414,6 @@ if tab == "Live Market":
         y_scale = alt.Scale(domain=[min_y, max_y]) if not math.isnan(min_y) else alt.Scale()
 
         label_angle = 45 if comp_selected_period == "1d" else 0
-
-        # Build chart (ET labels)
-        line = alt.Chart(chart_df).mark_line().encode(
-            x=alt.X(
-                "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                scale=None if comp_selected_period == "1d" else alt.Scale(nice="day"),
-                axis=alt.Axis(
-                    labelAngle=45 if comp_selected_period == "1d" else 0,
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
-                    tickCount=None if comp_selected_period == "1d" else {"interval": "day", "step": 1},
-                ),
-            ),
-            y=alt.Y("Price:Q", scale=y_scale),
-            color="Ticker:N",
-            tooltip=[
-                alt.Tooltip(
-                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
-                ),
-                alt.Tooltip("Price:Q", format=",.2f"),
-                alt.Tooltip("Ticker:N"),
-            ],
-        )
 
         tooltip_title = "Time (ET)" if comp_selected_period == "1d" else "Date"
 
