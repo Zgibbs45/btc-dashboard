@@ -1420,11 +1420,14 @@ if tab == "Live Market":
 
         # Sort by the same column we’ll plot on X
         order_col = "Date" if comp_selected_period == "1d" else "Date_Day"
-        chart_df.sort_values(["Ticker", order_col], inplace=True)
+        chart_df.sort_values(order_col, inplace=True)
 
         # Keep Date_Day when present so axis/points align
         id_vars = ["Date"] + (["Date_Day"] if comp_selected_period != "1d" else [])
         chart_df = chart_df.melt(id_vars=id_vars, var_name="Ticker", value_name="Price")
+
+        # NOW it's long-form, so this is valid:
+        chart_df.sort_values(["Ticker", order_col], inplace=True)
 
         # Thin ONLY the 1-year view (~50% fewer points), per ticker, keeping each ticker's last point
         if comp_selected_period == "1y":
