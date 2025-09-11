@@ -646,30 +646,40 @@ def get_quarter_date_bounds(quarter, year=None):
         raise ValueError(f"Unknown quarter: {quarter}")
 
 @st.cache_data(ttl=86400)
-def get_latest_edgar_inline_url(cik):
+def get_latest_edgar_inline_url(cik, accn=None):
     cik_clean = str(int(cik)).zfill(10)
     url = f"https://data.sec.gov/submissions/CIK{cik_clean}.json"
     headers = {"User-Agent": "CleanSpark Dashboard <zgibbs@cleanspark.com>"}
-    
     try:
         resp = requests.get(url, headers=headers)
         if resp.status_code != 200:
             return None
-
         data = resp.json()
         recent = data["filings"]["recent"]
-        accession_numbers = recent["accessionNumber"]
-        primary_docs = recent["primaryDocument"]
-        forms = recent["form"]
+        accession_numbers = recent.get("accessionNumber", [])
+        primary_docs       = recent.get("primaryDocument", [])
+        forms              = recent.get("form", [])
 
-        for accn, doc, form in zip(accession_numbers, primary_docs, forms):
+        def normalize(a): return (a or "").replace("-", "").lower()
+
+        if accn:
+            # Try to find the exact recent filing that matches this accession number
+            target = normalize(accn)
+            for a, doc, form in zip(accession_numbers, primary_docs, forms):
+                if normalize(a) == target and form in ("10-K", "10-Q") and doc.endswith(".htm"):
+                    accn_nodash = a.replace("-", "")
+                    return f"https://www.sec.gov/ix?doc=/Archives/edgar/data/{int(cik)}/{accn_nodash}/{doc}"
+            # If not found in recent, fall through to latest below
+
+        # Fallback: latest 10-K or 10-Q (previous behavior)
+        for a, doc, form in zip(accession_numbers, primary_docs, forms):
             if form in ("10-K", "10-Q") and doc.endswith(".htm"):
-                accn_nodash = accn.replace("-", "")
+                accn_nodash = a.replace("-", "")
                 return f"https://www.sec.gov/ix?doc=/Archives/edgar/data/{int(cik)}/{accn_nodash}/{doc}"
     except Exception as e:
         print("EDGAR inline link fetch failed:", e)
-
     return None
+
 
 @st.cache_data(ttl=3600)
 def get_latest_press_release_metrics(company_name, ticker_symbol):
@@ -1611,7 +1621,7 @@ if tab == "Live Market":
                     latest_values[label] = (val, accn)
 
             if latest_accn:
-                sec_url = get_latest_edgar_inline_url(cik)
+                sec_url = get_latest_edgar_inline_url(cik, accn=latest_accn)
                 for label, (val, accn) in latest_values.items():
                     if accn == latest_accn:
                         sec_data[label] = val
