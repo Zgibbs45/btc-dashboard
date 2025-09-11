@@ -414,30 +414,48 @@ def get_competitor_prices(symbols):
 
     return results
 
-@st.cache_data(ttl=300)  # cache 5 minutes to avoid hitting rate limits
+@st.cache_data(ttl=300)
 def fetch_btc_market_stats():
-    url = (
-        "https://api.coingecko.com/api/v3/coins/bitcoin"
-        "?localization=false&tickers=false&market_data=true"
-        "&community_data=false&developer_data=false&sparkline=false"
-    )
-    r = requests.get(url, timeout=15)
-    r.raise_for_status()
-    data = r.json()
-    md = data["market_data"]
+    # Try Pro API you already use elsewhere
+    try:
+        pro = get_coingecko_btc_data()  # uses st.secrets["COINGECKO_API_KEY"]
+        if pro:
+            return {
+                "price_usd": pro["price"],
+                "market_cap_usd": pro["market_cap"],
+                "volume_24h_usd": pro["volume"],
+                # These aren’t in the Pro simple/price call; keep sensible defaults:
+                "circulating_supply": None,
+                "total_supply": None,
+                "max_supply": 21_000_000,
+                "last_updated": datetime.now(ZoneInfo("UTC")).isoformat()
+            }
+    except Exception:
+        pass  # fall through to free endpoint
 
-    # Fallback to the known 21M cap if API returns null
-    max_supply = md.get("max_supply") or 21_000_000
-
-    return {
-        "price_usd": md["current_price"]["usd"],
-        "market_cap_usd": md["market_cap"]["usd"],
-        "volume_24h_usd": md["total_volume"]["usd"],
-        "circulating_supply": md["circulating_supply"],
-        "total_supply": md.get("total_supply"),
-        "max_supply": max_supply,
-        "last_updated": data.get("last_updated"),  # ISO8601 in UTC
-    }
+    # Fallback: public endpoint, but don’t crash the app if it’s unhappy
+    url = ("https://api.coingecko.com/api/v3/coins/bitcoin"
+           "?localization=false&tickers=false&market_data=true"
+           "&community_data=false&developer_data=false&sparkline=false")
+    try:
+        r = requests.get(url, timeout=15, headers={"User-Agent": "CleanSpark Dashboard/1.0"})
+        if r.status_code == 429:
+            raise RuntimeError("CoinGecko rate limit (HTTP 429)")
+        r.raise_for_status()
+        data = r.json()
+        md = data["market_data"]
+        return {
+            "price_usd": md["current_price"]["usd"],
+            "market_cap_usd": md["market_cap"]["usd"],
+            "volume_24h_usd": md["total_volume"]["usd"],
+            "circulating_supply": md["circulating_supply"],
+            "total_supply": md.get("total_supply"),
+            "max_supply": md.get("max_supply") or 21_000_000,
+            "last_updated": data.get("last_updated"),
+        }
+    except Exception as e:
+        st.warning(f"BTC stats temporarily unavailable ({getattr(getattr(e,'response',None),'status_code', 'HTTP error')}).")
+        return {}  # let the UI render without this block
 
 @st.cache_data(ttl=600)
 def fetch_comp_price_series(ticker, period):
@@ -804,41 +822,36 @@ if tab == "Bitcoin News":
     if not data.empty:
         stats = fetch_btc_market_stats()
 
-        # Format helpers
-        def fmt_btc(n): 
-            return f"{n:,.0f} BTC" if n is not None else "—"
+        if not stats:
+            st.info("Showing price chart only; market stats will return automatically when available.")
+        else:
+            # Format helpers
+            def fmt_btc(n): 
+                return f"{n:,.0f} BTC" if n is not None else "—"
 
-        def fmt_usd(n):
-            return f"${n:,.0f}" if n is not None else "—"
+            def fmt_usd(n):
+                return f"${n:,.0f}" if n is not None else "—"
 
-        def fmt_time_et(iso):
-            try:
-                ts = pd.to_datetime(iso, utc=True).tz_convert(ET)
-                return ts.strftime("%Y-%m-%d %I:%M %p ET")
-            except Exception:
-                return "—"
+            def fmt_time_et(iso):
+                try:
+                    ts = pd.to_datetime(iso, utc=True).tz_convert(ET)
+                    return ts.strftime("%Y-%m-%d %I:%M %p ET")
+                except Exception:
+                    return "—"
 
-        circulating = stats["circulating_supply"] or 0
-        max_supply  = stats["max_supply"] or 21_000_000
-        pct_mined   = (circulating / max_supply * 100) if max_supply else None
+            circulating = stats["circulating_supply"] or 0
+            max_supply  = stats["max_supply"] or 21_000_000
+            pct_mined   = (circulating / max_supply * 100) if max_supply else None
 
-        st.subheader("Market Stats")
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Price (USD)", f"{stats['price_usd']:,.2f}")
-        c2.metric("Circulating Supply", fmt_btc(circulating))
-        c3.metric("Max Supply", fmt_btc(max_supply))
-        c4.metric("Market Cap", fmt_usd(stats["market_cap_usd"]))
-
-        # Optional extras (uncomment if you want them visible)
-        # c5, c6 = st.columns(2)
-        # c5.metric("24h Volume", fmt_usd(stats["volume_24h_usd"]))
-        # c6.metric("% of Max Mined", f"{pct_mined:.2f}%" if pct_mined is not None else "—")
-
-        # Visual hint for progress toward max supply (optional)
-        # st.progress(min(1.0, circulating / max_supply) if max_supply else 0.0)
-
-        st.caption(f"As of {fmt_time_et(stats['last_updated'])}")
+            st.subheader("Market Stats")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Price (USD)", f"{stats['price_usd']:,.2f}")
+            c2.metric("Circulating Supply", fmt_btc(circulating))
+            c3.metric("Max Supply", fmt_btc(max_supply))
+            c4.metric("Market Cap", fmt_usd(stats["market_cap_usd"]))
+        # st.caption shows ET time; your BTC chart remains PT by design
+            st.caption(f"As of {fmt_time_et(stats['last_updated'])}")
+            
         btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
         btc_close["Price"] = btc_close["Price"].round(2)
@@ -1120,7 +1133,10 @@ if tab == "Live Market":
         price = info.get("regularMarketPrice")
         change_amount = info.get("regularMarketChange")
         prev_close = info.get("regularMarketPreviousClose")
-        change_percent = ((price - prev_close) / prev_close) * 100 if prev_close else None        
+        change_percent = (((price - prev_close) / prev_close) * 100
+            if (price is not None and prev_close not in (None, 0))
+            else None
+        )        
         clsk_price = clsk_open = clsk_high = clsk_low = None
         
         if sym != "CLSK":
