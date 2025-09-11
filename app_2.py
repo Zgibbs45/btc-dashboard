@@ -522,6 +522,14 @@ def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_dura
                     if end_year < year_cutoff:
                         continue
 
+                    if start_date is not None and end_date is not None:
+                        try:
+                            end_dt = date_parser.parse(end).replace(tzinfo=None)
+                        except Exception:
+                            continue
+                        if not (start_date <= end_dt <= end_date):
+                            continue
+
                     start = v.get("start")
                     if start:
                         try:
