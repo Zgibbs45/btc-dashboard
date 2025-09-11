@@ -1479,7 +1479,7 @@ if tab == "Live Market":
                 "Date:T",
                 title="Time (ET)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
-                scale=None,
+                # scale=None  # ← delete this line
             )
         else:
             x_axis_comp = alt.X(
@@ -1506,6 +1506,12 @@ if tab == "Live Market":
                 alt.Tooltip("Price:Q", format=",.2f"),
                 alt.Tooltip("Ticker:N"),
             ],
+        )
+        points = alt.Chart(chart_df).mark_circle(size=40).encode(
+            x=x_axis_comp,             # ← share the exact same X
+            y="Price:Q",
+            color="Ticker:N",
+            tooltip=[ ... ],
         )
         st.altair_chart((line + points).properties(
             width="container",
