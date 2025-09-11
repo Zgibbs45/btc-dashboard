@@ -416,31 +416,49 @@ def get_competitor_prices(symbols):
 
 @st.cache_data(ttl=300)
 def fetch_btc_market_stats():
-    # Try Pro API you already use elsewhere
+    # 1) Try Pro for price/market cap/volume (fast, key-protected)
     try:
-        pro = get_coingecko_btc_data()  # uses st.secrets["COINGECKO_API_KEY"]
+        pro = get_coingecko_btc_data()
         if pro:
+            circ = total = None
+            max_sup = 21_000_000
+            last = None
+
+            # 1a) Fill in supply via public endpoint (only for the extra fields)
+            try:
+                url = ("https://api.coingecko.com/api/v3/coins/bitcoin"
+                       "?localization=false&tickers=false&market_data=true"
+                       "&community_data=false&developer_data=false&sparkline=false")
+                r = requests.get(url, timeout=15, headers={"User-Agent": "CleanSpark Dashboard/1.0"})
+                r.raise_for_status()
+                data = r.json()
+                md = data["market_data"]
+                circ = md.get("circulating_supply")
+                total = md.get("total_supply")
+                max_sup = md.get("max_supply") or 21_000_000
+                last = data.get("last_updated")
+            except Exception:
+                # If this fails, we still return Pro fields + sensible defaults
+                pass
+
             return {
                 "price_usd": pro["price"],
                 "market_cap_usd": pro["market_cap"],
                 "volume_24h_usd": pro["volume"],
-                # These aren’t in the Pro simple/price call; keep sensible defaults:
-                "circulating_supply": None,
-                "total_supply": None,
-                "max_supply": 21_000_000,
-                "last_updated": datetime.now(ZoneInfo("UTC")).isoformat()
+                "circulating_supply": circ,
+                "total_supply": total,
+                "max_supply": max_sup,
+                "last_updated": last or datetime.now(ZoneInfo("UTC")).isoformat(),
             }
     except Exception:
-        pass  # fall through to free endpoint
+        pass  # fall through to public endpoint
 
-    # Fallback: public endpoint, but don’t crash the app if it’s unhappy
+    # 2) Fallback: public endpoint only
     url = ("https://api.coingecko.com/api/v3/coins/bitcoin"
            "?localization=false&tickers=false&market_data=true"
            "&community_data=false&developer_data=false&sparkline=false")
     try:
         r = requests.get(url, timeout=15, headers={"User-Agent": "CleanSpark Dashboard/1.0"})
-        if r.status_code == 429:
-            raise RuntimeError("CoinGecko rate limit (HTTP 429)")
         r.raise_for_status()
         data = r.json()
         md = data["market_data"]
@@ -448,14 +466,13 @@ def fetch_btc_market_stats():
             "price_usd": md["current_price"]["usd"],
             "market_cap_usd": md["market_cap"]["usd"],
             "volume_24h_usd": md["total_volume"]["usd"],
-            "circulating_supply": md["circulating_supply"],
+            "circulating_supply": md.get("circulating_supply"),
             "total_supply": md.get("total_supply"),
             "max_supply": md.get("max_supply") or 21_000_000,
             "last_updated": data.get("last_updated"),
         }
-    except Exception as e:
-        st.warning(f"BTC stats temporarily unavailable ({getattr(getattr(e,'response',None),'status_code', 'HTTP error')}).")
-        return {}  # let the UI render without this block
+    except Exception:
+        return {}
 
 @st.cache_data(ttl=600)
 def fetch_comp_price_series(ticker, period):
@@ -1507,7 +1524,7 @@ if tab == "Live Market":
                 alt.Tooltip("Ticker:N"),
             ],
         )
-        
+
         st.altair_chart((line + points).properties(
             width="container",
             height=400,
