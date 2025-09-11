@@ -1231,23 +1231,21 @@ if tab == "Live Market":
                             stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
                         stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
                         stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
+                        order_col = "Date"
                     else:
-                        # daily ranges: align the CALENDAR DAY to ET, then drop tz so Altair won’t shift to UTC
+                        # daily ranges: align the CALENDAR DAY to ET, then drop tz so Vega-Lite won’t shift
                         if stock_close["Date"].dt.tz is None:
                             stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
                         stock_close["Date_Day"] = (
                             stock_close["Date"]
-                            .dt.tz_convert("US/Eastern")  # move to ET first
-                            .dt.normalize()                # midnight ET
-                            .dt.tz_localize(None)          # strip tz to avoid Vega-Lite UTC shifts
+                            .dt.tz_convert("US/Eastern")   # move to ET first
+                            .dt.normalize()                 # midnight ET
+                            .dt.tz_localize(None)           # strip tz for stable Altair rendering
                         )
+                        order_col = "Date_Day"
 
-                    # sort by the same column you plot on the x-axis
-                    order_col = "Date" if selected_range == "1d" else "Date_Day"
+                    # sort by the same column you plot
                     stock_close.sort_values(order_col, inplace=True)
-
-                    if selected_range != "1d":
-                        stock_close["Date_Day"] = stock_close["Date"].dt.normalize()
 
                     if selected_range == "1y":
                         stock_close = stock_close.sort_values("Date" if "Date_Day" not in stock_close else "Date_Day").reset_index(drop=True)
@@ -1256,8 +1254,6 @@ if tab == "Live Market":
                             keep.append(len(stock_close) - 1)
                         stock_close = stock_close.iloc[keep].copy()
                     
-                    # Sort and trim if needed
-                    stock_close.sort_values("Date", inplace=True)
                     
                     # Calculate bounds
                     stock_low = df["Low"].min()
@@ -1296,33 +1292,23 @@ if tab == "Live Market":
                             x=x_axis,
                             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y])),
                             tooltip=[
-                                alt.Tooltip(
-                                    "Date:T" if selected_range == "1d" else "Date_Day:T",
-                                    title="Time (ET)" if selected_range == "1d" else "Date",
-                                    format="%I:%M %p" if selected_range == "1d" else "%b %d",
-                                ),
+                                alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
+                                            title="Time (ET)" if selected_range == "1d" else "Date",
+                                            format="%I:%M %p" if selected_range == "1d" else "%b %d"),
                                 alt.Tooltip("Price:Q", format=",.2f"),
                             ]
                         ),
-                        # inside alt.layer(...):
                         alt.Chart(stock_close).mark_circle(size=40).encode(
-                            x=alt.X("Date:T") if selected_range == "1d" else alt.X("Date_Day:T"),
+                            x=x_axis,  # <— important
                             y="Price:Q",
                             tooltip=[
-                                alt.Tooltip(
-                                    "Date:T" if selected_range == "1d" else "Date_Day:T",
-                                    title="Time (ET)" if selected_range == "1d" else "Date",
-                                    format="%I:%M %p" if selected_range == "1d" else "%b %d",
-                                ),
+                                alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
+                                            title="Time (ET)" if selected_range == "1d" else "Date",
+                                            format="%I:%M %p" if selected_range == "1d" else "%b %d"),
                                 alt.Tooltip("Price:Q", format=",.2f"),
                             ],
                         )
-
-                    ).properties(
-                        width="container",
-                        height=400,
-                        title=f"{sym} Price"
-                    )
+                    ).properties(width="container", height=400, title=f"{sym} Price")
 
                     points = alt.Chart(stock_close).mark_circle(size=40).encode(
                         x=x_axis,                      # <— use the same x spec as the line
