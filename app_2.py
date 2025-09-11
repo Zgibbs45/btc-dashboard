@@ -1507,12 +1507,7 @@ if tab == "Live Market":
                 alt.Tooltip("Ticker:N"),
             ],
         )
-        points = alt.Chart(chart_df).mark_circle(size=40).encode(
-            x=x_axis_comp,             # ← share the exact same X
-            y="Price:Q",
-            color="Ticker:N",
-            tooltip=[ ... ],
-        )
+        
         st.altair_chart((line + points).properties(
             width="container",
             height=400,
