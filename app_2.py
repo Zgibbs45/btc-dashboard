@@ -111,22 +111,18 @@ GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COINGECKO_API_KEY = st.secrets["COINGECKO_API_KEY"]
 
 SEC_FACTS = {
+    "Adjusted EBITDA": [],
+    "Adjusted EBITDA Margin": [],
     "Bitcoin Held": [
         "us-gaap:CryptoAssetNumberOfUnits"
     ],
-    "Revenue": [
-        "us-gaap:Revenues",
-        "us-gaap:RevenueFromContractWithCustomerIncludingAssessedTax"
+    "Cash & Equivalents": [
+        "us-gaap:CashAndCashEquivalentsAtCarryingValue"
     ],
-    "General and Administrative Expense": [
-        "us-gaap:GeneralAndAdministrativeExpense"
-    ],
+    "Cost of Goods Sold": [],
     "Cost of Revenue": [
         "us-gaap:CostOfRevenue",
         "us-gaap:CostsAndExpenses"
-    ],
-    "Cash & Equivalents": [
-        "us-gaap:CashAndCashEquivalentsAtCarryingValue"
     ],
     "Earnings Per Share (Basic)": [
         "us-gaap:EarningsPerShareBasic",
@@ -138,7 +134,21 @@ SEC_FACTS = {
         "us-gaap:IncomeLossFromContinuingOperationsPerDilutedShare",
         "us-gaap:BusinessAcquisitionProFormaEarningsPerShareDiluted"
     ],
-    "EH/s": []
+    "EBIT Margin": [],
+    "EH/s": [],
+    "General and Administrative Expense": [
+        "us-gaap:GeneralAndAdministrativeExpense"
+    ],
+    "Gross Profit Margin": [],
+    "Long Term Debt": [],
+    "Net Income": [],
+    "Net Income Margin": [],
+    "Operating Profit": [],
+    "Revenue": [
+        "us-gaap:Revenues",
+        "us-gaap:RevenueFromContractWithCustomerIncludingAssessedTax"
+    ],
+    "Total Shareholder Equity": []
 }
 
 range_options = {
