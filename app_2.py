@@ -1324,7 +1324,8 @@ if tab == "Bitcoin News":
                 exclude=exclude_term,
                 from_days=gen_from_days,
                 sort_by=gen_sort_by,
-                filter_func=filter_func
+                filter_func=filter_func,
+                pill_at="source"
             )
                     
 # --- HOME TAB ---
