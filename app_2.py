@@ -153,10 +153,26 @@ details[open] > summary { background: #eef2f7; }
 # Widen the pill a bit (overrides previous values)
 st.markdown("""
 <style>
-div[data-testid="stPopover"] > button,
+/* POPover: match the real button (not necessarily a direct child) */
+div[data-testid="stPopover"] button {
+  padding: 4px 12px !important;
+  min-width: 44px !important;    /* visibly wider */
+  min-height: 28px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center; justify-content: center;
+}
+
+/* Expander fallback: hide default triangle + match pill sizing */
+details > summary::-webkit-details-marker { display: none; }
+details > summary::marker { content: ""; }
 details > summary {
-  padding: 4px 12px;   /* overrides 2px 8px */
-  min-width: 36px;     /* adds a bit of width */
+  padding: 4px 12px !important;
+  min-width: 44px !important;
+  min-height: 28px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center; justify-content: center;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1184,7 +1200,7 @@ if tab == "Bitcoin News":
             
             with st.container():
                 # right column is a skinny rail that holds just the ⋯ pill
-                content_col, actions_col = st.columns([100, 6])
+                content_col, actions_col = st.columns([100, 10])
 
                 with actions_col:
                     # compact per-tweet menu
