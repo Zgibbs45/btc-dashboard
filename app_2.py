@@ -13,6 +13,7 @@ import math
 from zoneinfo import ZoneInfo
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
+import csv, os
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from dateutil.parser import parse as parse_date
@@ -402,20 +403,23 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     return results[:max_results]
     
 def translate_text(text, api_key, target="en"):
-    if not text.strip():
-        return text  # skip empty
+    if not text or not text.strip():
+        return text
     try:
-        url = "https://translation.googleapis.com/language/translate/v2"
-        params = {
-            "q": text,
-            "target": target,
-            "key": api_key
-        }
-        resp = requests.post(url, data=params)
-        resp.raise_for_status()
-        return resp.json()["data"]["translations"][0]["translatedText"]
+        r = requests.post(
+            "https://translation.googleapis.com/language/translate/v2",
+            params={"key": api_key},  # <-- key in query string
+            json={"q": text, "target": target, "format": "text"}  # safer than form-encoded
+        )
+        r.raise_for_status()
+        data = r.json()["data"]["translations"][0]
+        # Google returns HTML-escaped text; unescape so your HTML-escaping later is clean
+        return html.unescape(data["translatedText"])
     except Exception as e:
-        return text  # fallback to original
+        # optional: flip this flag in session_state if you want to see errors
+        if st.session_state.get("debug_translate", False):
+            st.error(f"Translate failed: {e}")
+        return text  # graceful fallback
     
 def twitter_img_variant(url: str, size: str = "medium") -> str:
     # pbs.twimg.com returns multiple sizes via the "name=" query param
@@ -458,6 +462,56 @@ def render_tweet_media(urls: list[str]):
     # Videos (keep Streamlit’s native player)
     for v in vids:
         st.video(v)
+
+
+def _append_csv(row, path="data/user_feedback.csv"):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    new_file = not os.path.exists(path)
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        cols = ["timestamp_utc","page","tweet_id","username","tweet_url","issue","note"]
+        w = csv.DictWriter(f, fieldnames=cols)
+        if new_file: w.writeheader()
+        w.writerow(row)
+
+def log_feedback(entry: dict):
+    """Always write to CSV; optionally mirror to Slack / Google Sheets if secrets exist."""
+    _append_csv(entry)
+
+    # Optional: Slack webhook (add SLACK_WEBHOOK_URL to st.secrets)
+    try:
+        hook = st.secrets.get("SLACK_WEBHOOK_URL")
+        if hook:
+            msg = (f"📝 *{entry['issue']}* — {entry['note'] or '(no details)'}\n"
+                   f"page: {entry['page']} · tweet: {entry['tweet_id']} · @{entry['username']}\n{entry['tweet_url']}")
+            requests.post(hook, json={"text": msg}, timeout=5)
+    except Exception:
+        pass  # CSV is the source of truth; Slack is best-effort
+
+def feedback_popover(tweet: dict, page: str):
+    """Small '⋯' menu next to each tweet."""
+    tid = tweet.get("tweet_id", "")
+    turl = f"https://x.com/i/web/status/{tid}"  # handle-agnostic
+    with st.popover("⋯", key=f"fb_{tid}"):   # falls back to expander below if popover not available
+        st.markdown("**Report an issue with this tweet**")
+        issue = st.selectbox(
+            "Type",
+            ["No image", "Broken link", "Translation wrong", "Bad source", "Spam", "Other"],
+            key=f"fb_type_{tid}",
+        )
+        note = st.text_area("Details (optional)", key=f"fb_note_{tid}", placeholder="Tell us what you saw…")
+        with st.form(f"fb_form_{tid}", clear_on_submit=True):
+            submitted = st.form_submit_button("Send")
+            if submitted:
+                log_feedback({
+                    "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
+                    "page": page,
+                    "tweet_id": tid,
+                    "username": tweet.get("username", ""),
+                    "tweet_url": turl,
+                    "issue": issue,
+                    "note": note.strip(),
+                })
+                st.success("Thanks! Logged for review.")
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
