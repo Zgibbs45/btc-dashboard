@@ -1163,7 +1163,7 @@ if tab == "Bitcoin News":
 
                 # New: Twitter-like responsive media
                 render_tweet_media(tweet["media"])
-
+                feedback_popover(tweet, page="Bitcoin News")
                 st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
                     
     # General News
