@@ -13,6 +13,7 @@ import math
 from zoneinfo import ZoneInfo
 from pycoingecko import CoinGeckoAPI
 from PIL import Image
+import csv, os
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from dateutil.parser import parse as parse_date
@@ -101,6 +102,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+#Tweet Image Format
 st.markdown("""
 <style>
 /* Cap each tweet's content width (similar to Twitter’s ~680px) */
@@ -125,6 +127,30 @@ st.markdown("""
 @media (max-width: 720px) { .tweet-block { max-width: 100%; } }
 </style>
 """, unsafe_allow_html=True)
+
+#Tweet Report Pill
+st.markdown("""
+<style>
+/* Small pill for popover button */
+div[data-testid="stPopover"] > button {
+  padding: 2px 8px;
+  min-height: 26px; min-width: 26px;
+  border-radius: 9999px;
+  font-size: 16px; line-height: 1;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+}
+
+/* Fallback: compact look for expander summary if popover isn't available */
+details > summary {
+  list-style: none; cursor: pointer;
+  border: 1px solid #e2e8f0; border-radius: 9999px;
+  padding: 2px 8px; font-size: 16px; line-height: 1; background: #f8fafc;
+  display: inline-block;
+}
+details[open] > summary { background: #eef2f7; }
+</style>
+""", unsafe_allow_html=True)
+
 
 ET = pytz.timezone("America/New_York")
 
@@ -402,20 +428,23 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     return results[:max_results]
     
 def translate_text(text, api_key, target="en"):
-    if not text.strip():
-        return text  # skip empty
+    if not text or not text.strip():
+        return text
     try:
-        url = "https://translation.googleapis.com/language/translate/v2"
-        params = {
-            "q": text,
-            "target": target,
-            "key": api_key
-        }
-        resp = requests.post(url, data=params)
-        resp.raise_for_status()
-        return resp.json()["data"]["translations"][0]["translatedText"]
+        r = requests.post(
+            "https://translation.googleapis.com/language/translate/v2",
+            params={"key": api_key},  # <-- key in query string
+            json={"q": text, "target": target, "format": "text"}  # safer than form-encoded
+        )
+        r.raise_for_status()
+        data = r.json()["data"]["translations"][0]
+        # Google returns HTML-escaped text; unescape so your HTML-escaping later is clean
+        return html.unescape(data["translatedText"])
     except Exception as e:
-        return text  # fallback to original
+        # optional: flip this flag in session_state if you want to see errors
+        if st.session_state.get("debug_translate", False):
+            st.error(f"Translate failed: {e}")
+        return text  # graceful fallback
     
 def twitter_img_variant(url: str, size: str = "medium") -> str:
     # pbs.twimg.com returns multiple sizes via the "name=" query param
@@ -458,6 +487,40 @@ def render_tweet_media(urls: list[str]):
     # Videos (keep Streamlit’s native player)
     for v in vids:
         st.video(v)
+
+
+def _append_csv(row, path="data/user_feedback.csv"):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    new_file = not os.path.exists(path)
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        cols = ["timestamp_utc","page","tweet_id","username","tweet_url","issue","note"]
+        w = csv.DictWriter(f, fieldnames=cols)
+        if new_file: w.writeheader()
+        w.writerow(row)
+
+def log_feedback(entry: dict):
+    """Always write to CSV; optionally mirror to Slack / Google Sheets if secrets exist."""
+    _append_csv(entry)
+
+def feedback_popover(tweet: dict, page: str):
+    tid = tweet.get("tweet_id", "")
+    turl = f"https://x.com/i/web/status/{tid}"
+    pop = getattr(st, "popover", None)
+    ctx = pop("⋯", key=f"fb_{tid}") if callable(pop) else st.expander("⋯", expanded=False)
+    with ctx:
+        st.markdown("**Report an issue with this tweet**")
+        with st.form(f"fb_form_{tid}", clear_on_submit=True):
+            issue = st.selectbox("Type",
+                                 ["No image","Broken link","Translation wrong","Bad source","Spam","Other"],
+                                 key=f"fb_type_{tid}")
+            note = st.text_area("Details (optional)", key=f"fb_note_{tid}", placeholder="Tell us what you saw…")
+            if st.form_submit_button("Send"):
+                log_feedback({
+                    "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
+                    "page": page, "tweet_id": tid, "username": tweet.get("username",""),
+                    "tweet_url": turl, "issue": issue, "note": (note or "").strip()
+                })
+                st.success("Thanks! Logged for review.")
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
@@ -1104,22 +1167,29 @@ if tab == "Bitcoin News":
             final_text = html.escape(clean_text).replace("\n", "<br>")
             
             with st.container():
-                st.markdown(f"""
-                <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
-                    <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
-                    <div style="flex:1 1 auto;">
-                        <div style="font-weight:600;">{tweet['name']}</div>
-                        <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
-                        <div style="margin-top:6px; font-size:15px; line-height:1.5;">{final_text}</div>
-                        <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
-                        <div style="margin-top:6px;"><a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
+                # right column is a skinny rail that holds just the ⋯ pill
+                content_col, actions_col = st.columns([100, 6])
+
+                with actions_col:
+                    # compact per-tweet menu
+                    feedback_popover(tweet, page="Bitcoin News")
+
+                with content_col:
+                    st.markdown(f"""
+                    <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
+                        <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
+                        <div style="flex:1 1 auto;">
+                            <div style="font-weight:600;">{tweet['name']}</div>
+                            <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
+                            <div style="margin-top:6px; font-size:15px; line-height:1.5;">{final_text}</div>
+                            <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
+                            <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
+                        </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
 
                 # New: Twitter-like responsive media
                 render_tweet_media(tweet["media"])
-
                 st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
                     
     # General News
