@@ -18,7 +18,6 @@ from dateutil import parser as date_parser
 from dateutil.parser import parse as parse_date
 from urllib.parse import quote
 
-
 st.set_page_config(layout="wide")
 
 st.markdown(
@@ -102,8 +101,32 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-ET = pytz.timezone("America/New_York")
+st.markdown("""
+<style>
+/* Cap each tweet's content width (similar to Twitter’s ~680px) */
+.tweet-block { max-width: 680px; }
 
+/* Responsive media grid */
+.media-grid { display: grid; gap: 6px; margin-top: 8px; width: 100%; }
+.media-grid.cols-1 { grid-template-columns: 1fr; }
+.media-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.media-grid.cols-3 { grid-template-columns: 2fr 1fr; grid-auto-rows: 1fr; }
+.media-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+
+/* Cropped tiles with smooth scaling on zoom */
+.media { position: relative; overflow: hidden; border-radius: 12px; background: #f1f5f9; }
+.media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Aspect ratios that mimic Twitter’s crops */
+.media.ratio-16x9 { aspect-ratio: 16 / 9; }
+.media.ratio-4x5 { aspect-ratio: 4 / 5; }
+.media.ratio-1x1 { aspect-ratio: 1 / 1; }
+
+@media (max-width: 720px) { .tweet-block { max-width: 100%; } }
+</style>
+""", unsafe_allow_html=True)
+
+ET = pytz.timezone("America/New_York")
 
 NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
 TWITTER_BEARER_TOKEN = st.secrets["TWITTER_BEARER_TOKEN"]
@@ -261,7 +284,6 @@ def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=
         st.error(f"NewsAPI request failed: {e}")
         return []
 
-
 def regulatory_article_filter(article):
     t = (article.get("title") or "").strip().lower()
     d = (article.get("description") or "").strip().lower()
@@ -394,6 +416,48 @@ def translate_text(text, api_key, target="en"):
         return resp.json()["data"]["translations"][0]["translatedText"]
     except Exception as e:
         return text  # fallback to original
+    
+def twitter_img_variant(url: str, size: str = "medium") -> str:
+    # pbs.twimg.com returns multiple sizes via the "name=" query param
+    if "pbs.twimg.com/media/" in url:
+        if "name=" in url:
+            url = re.sub(r"name=\w+", f"name={size}", url)
+        else:
+            url += ("&" if "?" in url else "?") + f"name={size}"
+    return url
+
+def render_tweet_media(urls: list[str]):
+    # Separate images from videos
+    imgs = [u for u in urls if u.lower().endswith((".jpg", ".jpeg", ".png")) or "pbs.twimg.com/media/" in u]
+    vids = [u for u in urls if u.lower().endswith((".mp4", ".mov", ".webm"))]
+
+    # Request a medium-sized variant for Twitter-hosted images
+    imgs = [twitter_img_variant(u, "medium") for u in imgs]
+
+    n = len(imgs)
+    if n:
+        cols_class = f"cols-{min(n,4)}"
+        html = [f'<div class="media-grid {cols_class}">']
+        if n == 1:
+            html.append(f'<div class="media ratio-16x9"><img src="{imgs[0]}" loading="lazy"></div>')
+        elif n == 2:
+            for u in imgs:
+                html.append(f'<div class="media ratio-4x5"><img src="{u}" loading="lazy"></div>')
+        elif n == 3:
+            # Big tile on the left, two squares on the right
+            html.append(f'<div class="media ratio-4x5" style="grid-row: span 2;"><img src="{imgs[0]}" loading="lazy"></div>')
+            for u in imgs[1:]:
+                html.append(f'<div class="media ratio-1x1"><img src="{u}" loading="lazy"></div>')
+        else:
+            # First four as a 2x2 grid
+            for u in imgs[:4]:
+                html.append(f'<div class="media ratio-1x1"><img src="{u}" loading="lazy"></div>')
+        html.append("</div>")
+        st.markdown("\n".join(html), unsafe_allow_html=True)
+
+    # Videos (keep Streamlit’s native player)
+    for v in vids:
+        st.video(v)
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
@@ -689,7 +753,6 @@ def get_latest_edgar_inline_url(cik, accn=None):
     except Exception as e:
         print("EDGAR inline link fetch failed:", e)
     return None
-
 
 @st.cache_data(ttl=3600)
 def get_latest_press_release_metrics(company_name, ticker_symbol):
@@ -1041,35 +1104,22 @@ if tab == "Bitcoin News":
             final_text = html.escape(clean_text).replace("\n", "<br>")
             
             with st.container():
-                st.markdown(
-                    f"""
-                    <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 1rem;">
-                        <img src="{tweet['profile_img']}" style="width: 48px; height: 48px; border-radius: 50%;">
-                        <div>
-                            <div style="font-weight: 600;">{tweet['name']}</div>
-                            <div style="color: gray; font-size: 13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
-                            <div style="margin-top: 6px; font-size: 15px; line-height: 1.5;">{final_text}</div>
-                            <div style="color: gray; font-size: 13px; margin-top: 6px;">
-                                🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}
-                            </div>
-                            <div style="margin-top: 6px;">
-                                <a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank" style="color: #1DA1F2; font-size: 13px;">View on Twitter</a>
-                            </div>
-                        </div>
+                st.markdown(f"""
+                <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
+                    <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
+                    <div style="flex:1 1 auto;">
+                        <div style="font-weight:600;">{tweet['name']}</div>
+                        <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
+                        <div style="margin-top:6px; font-size:15px; line-height:1.5;">{final_text}</div>
+                        <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
+                        <div style="margin-top:6px;"><a href="https://twitter.com/{tweet['username']}/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
                     </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-        
-                # Media handling
-                for url in tweet["media"]:
-                    if url.lower().endswith((".jpg", ".png", ".jpeg")):
-                        st.image(url, use_container_width=True)
-                    elif url.lower().endswith((".mp4", ".mov", ".webm")):
-                        st.video(url)
-                    else:
-                        st.markdown(f"[View Media]({url})")
-        
+                </div>
+                """, unsafe_allow_html=True)
+
+                # New: Twitter-like responsive media
+                render_tweet_media(tweet["media"])
+
                 st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
                     
     # General News
