@@ -506,7 +506,13 @@ def feedback_popover(tweet: dict, page: str):
     tid = tweet.get("tweet_id", "")
     turl = f"https://x.com/i/web/status/{tid}"
     pop = getattr(st, "popover", None)
-    ctx = pop("⋯", key=f"fb_{tid}") if callable(pop) else st.expander("⋯", expanded=False)
+    if callable(pop):
+        try:
+            ctx = pop("⋯")     # ≤ some Streamlit versions: no `key` arg
+        except TypeError:
+            ctx = st.expander("⋯", expanded=False)
+    else:
+        ctx = st.expander("⋯", expanded=False)
     with ctx:
         st.markdown("**Report an issue with this tweet**")
         with st.form(f"fb_form_{tid}", clear_on_submit=True):
