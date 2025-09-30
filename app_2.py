@@ -131,14 +131,15 @@ st.markdown("""
 #Tweet Report Pill
 st.markdown("""
 <style>
-/* Slightly wider pill for both popover and expander fallback */
-div[data-testid="stPopover"] > button,
-details > summary {
-  padding: 4px 12px;   /* was 2px 8px */
-  min-width: 36px;     /* was ~26px */
-  min-height: 26px;
+/* Small pill for popover button */
+div[data-testid="stPopover"] > button {
+  padding: 2px 8px;
+  min-height: 26px; min-width: 26px;
   border-radius: 9999px;
+  font-size: 16px; line-height: 1;
+  background: #f8fafc; border: 1px solid #e2e8f0;
 }
+
 /* Fallback: compact look for expander summary if popover isn't available */
 details > summary {
   list-style: none; cursor: pointer;
@@ -147,6 +148,16 @@ details > summary {
   display: inline-block;
 }
 details[open] > summary { background: #eef2f7; }
+</style>
+""", unsafe_allow_html=True)
+# Widen the pill a bit (overrides previous values)
+st.markdown("""
+<style>
+div[data-testid="stPopover"] > button,
+details > summary {
+  padding: 4px 12px;   /* overrides 2px 8px */
+  min-width: 36px;     /* adds a bit of width */
+}
 </style>
 """, unsafe_allow_html=True)
 
