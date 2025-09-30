@@ -477,21 +477,11 @@ def log_feedback(entry: dict):
     """Always write to CSV; optionally mirror to Slack / Google Sheets if secrets exist."""
     _append_csv(entry)
 
-    # Optional: Slack webhook (add SLACK_WEBHOOK_URL to st.secrets)
-    try:
-        hook = st.secrets.get("SLACK_WEBHOOK_URL")
-        if hook:
-            msg = (f"📝 *{entry['issue']}* — {entry['note'] or '(no details)'}\n"
-                   f"page: {entry['page']} · tweet: {entry['tweet_id']} · @{entry['username']}\n{entry['tweet_url']}")
-            requests.post(hook, json={"text": msg}, timeout=5)
-    except Exception:
-        pass  # CSV is the source of truth; Slack is best-effort
-
 def feedback_popover(tweet: dict, page: str):
     """Small '⋯' menu next to each tweet."""
     tid = tweet.get("tweet_id", "")
     turl = f"https://x.com/i/web/status/{tid}"  # handle-agnostic
-    with st.popover("⋯", key=f"fb_{tid}"):   # falls back to expander below if popover not available
+    with st.expander("⋯  Report an issue", expanded=False):
         st.markdown("**Report an issue with this tweet**")
         issue = st.selectbox(
             "Type",
