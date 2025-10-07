@@ -238,6 +238,35 @@ competitor_tickers = ["CLSK", "BITF", "BTDR", "CANG", "CIFR", "CORZ", "HIVE", "H
 
 # --- Helper Functions ---
 
+def github_create_issue(title: str, body: str, labels=None, assignees=None):
+    token = st.secrets.get("ISSUE_TOKEN")
+    repo  = st.secrets.get("GITHUB_REPO")
+    if not token or not repo:
+        # Silently skip if not configured
+        return False, "missing-secrets"
+
+    url = f"https://api.github.com/repos/{repo}/issues"
+    payload = {"title": title, "body": body}
+    if labels: payload["labels"] = labels
+    if assignees: payload["assignees"] = assignees
+
+    try:
+        r = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            json=payload,
+            timeout=10,
+        )
+        if r.status_code >= 300:
+            return False, f"status={r.status_code} body={r.text[:200]}"
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
 def format_timestamp(iso_string):
     dt = date_parser.parse(iso_string).astimezone(ZoneInfo("UTC"))
     now = datetime.now(ZoneInfo("UTC"))
@@ -359,71 +388,6 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
     if filter_func:
         batch = [a for a in batch if filter_func(a)]
     st.session_state[key] = batch[:PAGE_SIZE]
-
-    for art in st.session_state[key]:
-        if pill_at == "title":
-            # Option 2: pill aligned with HEADLINE (your mock #2)
-            left, right = st.columns([100, 10])
-            with left:
-                st.markdown(f"**[{art['title']}]({art['url']})**")
-            with right:
-                st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
-                news_feedback_popover(art, page="Bitcoin News")
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
-        else:
-            # Option 1: pill aligned with SOURCE line (your mock #1)
-            st.markdown(f"**[{art['title']}]({art['url']})**")
-            left, right = st.columns([100, 10])
-            with left:
-                st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
-            with right:
-                st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
-                news_feedback_popover(art, page="Bitcoin News")
-                st.markdown('</div>', unsafe_allow_html=True)
-
-def news_feedback_popover(article: dict, page: str = "Bitcoin News"):
-    import hashlib
-    url = article.get("url", "")
-    src = (article.get("source") or {}).get("name", "")
-    title = article.get("title", "")
-
-    # stable, short id from URL for unique widget keys
-    aid = hashlib.md5(url.encode("utf-8")).hexdigest()[:8]
-
-    pop = getattr(st, "popover", None)
-    # popover on newer Streamlit, nice fallback on older
-    try:
-        ctx = pop("⋯") if callable(pop) else st.expander("⋯", expanded=False)
-    except TypeError:
-        ctx = st.expander("⋯", expanded=False)
-
-    with ctx:
-        st.markdown("**Report an issue with this article**")
-        with st.form(f"news_fb_{aid}", clear_on_submit=True):
-            issue = st.selectbox(
-                "Type",
-                ["Paywalled", "Broken link", "Not relevant", "Low-quality source",
-                 "Misleading headline", "Other"],
-                key=f"news_type_{aid}",
-            )
-            note = st.text_area(
-                "Details (optional)",
-                key=f"news_note_{aid}",
-                placeholder="Tell us what you saw…",
-            )
-            if st.form_submit_button("Send"):
-                # Reuse the same CSV schema. Leave tweet_id blank; store source+URL.
-                log_feedback({
-                    "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
-                    "page": page,
-                    "tweet_id": "",                # (empty for articles)
-                    "username": src,               # store news source here
-                    "tweet_url": url,              # store article URL here
-                    "issue": issue + f" — {title[:80]}",
-                    "note": (note or "").strip(),
-                })
-                st.success("Thanks! Logged.")
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
@@ -589,6 +553,30 @@ def _append_csv(row, path="data/user_feedback.csv"):
 def log_feedback(entry: dict):
     """Always write to CSV; optionally mirror to Slack / Google Sheets if secrets exist."""
     _append_csv(entry)
+    try:
+        # labels help triage in GitHub
+        labels = ["user-feedback", f"page:{entry.get('page','unknown')}"]
+        labels.append("kind:tweet" if entry.get("tweet_id") else "kind:article")
+
+        title = f"[Feedback] {entry.get('issue','(no type)')} — {entry.get('page','(no page)')}"
+
+        body = (
+            f"**Page**: {entry.get('page','')}\n"
+            f"**Issue**: {entry.get('issue','')}\n"
+            f"**Note**: {entry.get('note','(none)')}\n\n"
+            f"**Context**:\n"
+            f"- tweet_id/article_id: {entry.get('tweet_id','')}\n"
+            f"- source/user: {entry.get('username','')}\n"
+            f"- url: {entry.get('tweet_url','')}\n"
+            f"- when (UTC): {entry.get('timestamp_utc','')}\n"
+        )
+
+        ok, err = github_create_issue(title, body, labels=labels)
+        if not ok and st.session_state.get("debug_feedback"):
+            st.info(f"Saved to CSV; GitHub mirror failed: {err}")
+    except Exception as e:
+        if st.session_state.get("debug_feedback"):
+            st.info(f"Saved to CSV; GitHub mirror error: {e}")
 
 def feedback_popover(tweet: dict, page: str):
     tid = tweet.get("tweet_id", "")
@@ -1114,8 +1102,6 @@ if tab == "Bitcoin News":
             c2.metric("Circulating Supply", fmt_btc(circulating))
             c3.metric("Max Supply", fmt_btc(max_supply))
             c4.metric("Market Cap", fmt_usd(stats["market_cap_usd"]))
-        # st.caption shows ET time; your BTC chart remains PT by design
-            st.caption(f"As of {fmt_time_et(stats['last_updated'])}")
 
         btc_close = data["Close"].dropna().round(2).rename("Bitcoin Price").reset_index()
         btc_close.columns = ["Date", "Price"]
