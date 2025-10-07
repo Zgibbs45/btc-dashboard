@@ -389,6 +389,71 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         batch = [a for a in batch if filter_func(a)]
     st.session_state[key] = batch[:PAGE_SIZE]
 
+    for art in st.session_state[key]:
+        if pill_at == "title":
+            # Option 2: pill aligned with HEADLINE (your mock #2)
+            left, right = st.columns([100, 10])
+            with left:
+                st.markdown(f"**[{art['title']}]({art['url']})**")
+            with right:
+                st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
+                news_feedback_popover(art, page="Bitcoin News")
+                st.markdown('</div>', unsafe_allow_html=True)
+            st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
+        else:
+            # Option 1: pill aligned with SOURCE line (your mock #1)
+            st.markdown(f"**[{art['title']}]({art['url']})**")
+            left, right = st.columns([100, 10])
+            with left:
+                st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
+            with right:
+                st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
+                news_feedback_popover(art, page="Bitcoin News")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+def news_feedback_popover(article: dict, page: str = "Bitcoin News"):
+    import hashlib
+    url = article.get("url", "")
+    src = (article.get("source") or {}).get("name", "")
+    title = article.get("title", "")
+
+    # stable, short id from URL for unique widget keys
+    aid = hashlib.md5(url.encode("utf-8")).hexdigest()[:8]
+
+    pop = getattr(st, "popover", None)
+    # popover on newer Streamlit, nice fallback on older
+    try:
+        ctx = pop("⋯") if callable(pop) else st.expander("⋯", expanded=False)
+    except TypeError:
+        ctx = st.expander("⋯", expanded=False)
+
+    with ctx:
+        st.markdown("**Report an issue with this article**")
+        with st.form(f"news_fb_{aid}", clear_on_submit=True):
+            issue = st.selectbox(
+                "Type",
+                ["Paywalled", "Broken link", "Not relevant", "Low-quality source",
+                 "Misleading headline", "Other"],
+                key=f"news_type_{aid}",
+            )
+            note = st.text_area(
+                "Details (optional)",
+                key=f"news_note_{aid}",
+                placeholder="Tell us what you saw…",
+            )
+            if st.form_submit_button("Send"):
+                # Reuse the same CSV schema. Leave tweet_id blank; store source+URL.
+                log_feedback({
+                    "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
+                    "page": page,
+                    "tweet_id": "",                # (empty for articles)
+                    "username": src,               # store news source here
+                    "tweet_url": url,              # store article URL here
+                    "issue": issue + f" — {title[:80]}",
+                    "note": (note or "").strip(),
+                })
+                st.success("Thanks! Logged.")
+
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
     headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
