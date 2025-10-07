@@ -1312,59 +1312,60 @@ if tab == "Bitcoin News":
     col1, col2 = st.columns([1.8,2.2])
 
     with col1:
-        st.subheader("🐦 Twitter Feed (last 24 hours)")
+        header_slot = st.container()
 
-        # Row 1: Scope pill (full width)
         tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default="CleanSpark Only", key="tw_scope")
-
-        # Row 2: Sort only (fixed 24h window)
         tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default="Likes", key="tw_sort")
-
         tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
         tw_max_days = 1  # fixed 24-hour window
 
         tweets = get_cleanspark_tweets(
             query_scope=tw_scope_val,
-            max_age_days=tw_max_days,        # always 1 day
-            sort_by=tw_sort.lower(),         # "likes" or "retweets"
+            max_age_days=tw_max_days,        
+            sort_by=tw_sort.lower(),         
             max_results=15
         )
-        
+
+        with header_slot:
+            header, pill = st.columns([1, 0.18])
+            with header:
+                st.subheader("🐦 Twitter Feed (last 24 hours)")
+            with pill:
+                render_section_report_pill(
+                    section_key="tweets",
+                    items=tweets,            
+                    kind="tweet",
+                    page="Bitcoin News"
+                )
+
         for tweet in tweets:
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
             clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
-            
+
             def custom_escape(text):
-                text = text.replace("&", "<<<AMP>>>")  # temporary placeholder
+                text = text.replace("&", "<<<AMP>>>")  
                 text = html.escape(text)
                 return text.replace("<<<AMP>>>", "&")
+
             final_text = html.escape(clean_text).replace("\n", "<br>")
-            
+
             with st.container():
-                # right column is a skinny rail that holds just the ⋯ pill
-                content_col, actions_col = st.columns([100, 10])
-
-                with actions_col:
-                    # compact per-tweet menu
-                    feedback_popover(tweet, page="Bitcoin News")
-
-                with content_col:
-                    st.markdown(f"""
-                    <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
-                        <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
-                        <div style="flex:1 1 auto;">
-                            <div style="font-weight:600;">{tweet['name']}</div>
-                            <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
-                            <div style="margin-top:6px; font-size:15px; line-height:1.5;">{final_text}</div>
-                            <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
-                            <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
-                        </div>
+                st.markdown(f"""
+                <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
+                    <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
+                    <div style="flex:1 1 auto;">
+                        <div style="font-weight:600;">{tweet['name']}</div>
+                        <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
+                        <div style="margin-top:6px; font-size:15px; line-height:1.5;">{final_text}</div>
+                        <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
+                        <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
                     </div>
-                    """, unsafe_allow_html=True)
+                </div>
+                """, unsafe_allow_html=True)
 
-                # New: Twitter-like responsive media
                 render_tweet_media(tweet["media"])
                 st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
+
                     
     # General News
     with col2:
