@@ -119,35 +119,33 @@ st.markdown(
 #Tweet Image Format
 st.markdown("""
 <style>
-/* Cap each tweet's content width (similar to Twitter’s ~680px) */
+/* Cap text like Twitter */
 .tweet-block { max-width: 680px; }
 
-<style>
-/* Prevent long tokens (URLs, @mentions chains) from spilling into the next column */
-.tweet-block, .tweet-block * {
-  overflow-wrap: anywhere;   /* modern */
-  word-break: break-word;    /* fallback */
-  hyphens: auto;
+/* Align media under the text (48px avatar + 12px gap = 60px indent) */
+.media-grid {
+  display: grid; gap: 6px;
+  margin: 8px 0 0 60px;             /* indent under the text */
+  width: calc(100% - 60px);
+  max-width: 680px;                 /* don’t exceed tweet width */
 }
-</style>
-
-/* Responsive media grid */
-.media-grid { display: grid; gap: 6px; margin-top: 8px; width: 100%; }
+/* Grid templates */
 .media-grid.cols-1 { grid-template-columns: 1fr; }
-.media-grid.cols-2 { grid-template-columns: 1fr 1fr; }
-.media-grid.cols-3 { grid-template-columns: 2fr 1fr; grid-auto-rows: 1fr; }
+.media-grid.cols-2,
+.media-grid.cols-3,                 /* treat 3 like a compact 2-col grid */
 .media-grid.cols-4 { grid-template-columns: 1fr 1fr; }
 
-/* Cropped tiles with smooth scaling on zoom */
+/* Cropped tiles */
 .media { position: relative; overflow: hidden; border-radius: 12px; background: #f1f5f9; }
 .media img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Aspect ratios that mimic Twitter’s crops */
+/* Aspect ratios */
 .media.ratio-16x9 { aspect-ratio: 16 / 9; }
-.media.ratio-4x5 { aspect-ratio: 4 / 5; }
-.media.ratio-1x1 { aspect-ratio: 1 / 1; }
+.media.ratio-1x1  { aspect-ratio: 1 / 1; }
 
-@media (max-width: 720px) { .tweet-block { max-width: 100%; } }
+@media (max-width: 720px) {
+  .tweet-block, .media-grid { max-width: 100%; margin-left: 0; width: 100%; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -611,38 +609,29 @@ def twitter_img_variant(url: str, size: str = "medium") -> str:
     return url
 
 def render_tweet_media(urls: list[str]):
-    # Separate images from videos
+    # Separate images/videos
     imgs = [u for u in urls if u.lower().endswith((".jpg", ".jpeg", ".png")) or "pbs.twimg.com/media/" in u]
     vids = [u for u in urls if u.lower().endswith((".mp4", ".mov", ".webm"))]
 
-    # Request a medium-sized variant for Twitter-hosted images
+    # Ask Twitter for a smaller variant where possible
     imgs = [twitter_img_variant(u, "medium") for u in imgs]
 
     n = len(imgs)
     if n:
-        cols_class = f"cols-{min(n,4)}"
+        # 1 image = wide 16:9; 2–4 images = compact 2-col square grid
+        cols_class = "cols-1" if n == 1 else "cols-2"
         html = [f'<div class="media-grid {cols_class}">']
         if n == 1:
             html.append(f'<div class="media ratio-16x9"><img src="{imgs[0]}" loading="lazy"></div>')
-        elif n == 2:
-            for u in imgs:
-                html.append(f'<div class="media ratio-4x5"><img src="{u}" loading="lazy"></div>')
-        elif n == 3:
-            # Big tile on the left, two squares on the right
-            html.append(f'<div class="media ratio-4x5" style="grid-row: span 2;"><img src="{imgs[0]}" loading="lazy"></div>')
-            for u in imgs[1:]:
-                html.append(f'<div class="media ratio-1x1"><img src="{u}" loading="lazy"></div>')
         else:
-            # First four as a 2x2 grid
             for u in imgs[:4]:
                 html.append(f'<div class="media ratio-1x1"><img src="{u}" loading="lazy"></div>')
         html.append("</div>")
         st.markdown("\n".join(html), unsafe_allow_html=True)
 
-    # Videos (keep Streamlit’s native player)
+    # Videos (keep Streamlit player)
     for v in vids:
         st.video(v)
-
 
 def _append_csv(row, path="data/user_feedback.csv"):
     os.makedirs(os.path.dirname(path), exist_ok=True)
