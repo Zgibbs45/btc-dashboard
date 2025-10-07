@@ -164,7 +164,7 @@ details > summary {
 details[open] > summary { background: #eef2f7; }
 </style>
 """, unsafe_allow_html=True)
-# Widen the pill a bit (overrides previous values)
+
 st.markdown("""
 <style>
 /* POPover: match the real button (not necessarily a direct child) */
@@ -256,7 +256,6 @@ def github_create_issue(title: str, body: str, labels=None, assignees=None):
     token = st.secrets.get("ISSUE_TOKEN")
     repo  = st.secrets.get("GITHUB_REPO")
     if not token or not repo:
-        # Silently skip if not configured
         return False, "missing-secrets"
 
     url = f"https://api.github.com/repos/{repo}/issues"
@@ -344,9 +343,9 @@ def render_section_report_pill(*, section_key: str, items: list[dict], kind: str
                     log_feedback({
                         "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
                         "page": page,
-                        "tweet_id": "",                # keep empty for articles
-                        "username": src,               # store news source here
-                        "tweet_url": url,              # store article URL here
+                        "tweet_id": "",              
+                        "username": src,             
+                        "tweet_url": url,             
                         "issue": issue + (f" — {title[:80]}" if title else ""),
                         "note": (note or "").strip(),
                     })
@@ -357,10 +356,8 @@ def format_timestamp(iso_string):
     now = datetime.now(ZoneInfo("UTC"))
     delta = now - dt
 
-    # Format like "June 18, 12:34 PM"
     nice_time = dt.strftime("%B %d, %I:%M %p").lstrip("0").replace(" 0", " ")
 
-    # Format relative time
     seconds = int(delta.total_seconds())
     if seconds < 60:
         relative = f"{seconds} sec ago"
@@ -376,7 +373,7 @@ def format_timestamp(iso_string):
 
     return f"{nice_time} ({relative})"
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=300)
 def get_coingecko_btc_data():
     url = "https://pro-api.coingecko.com/api/v3/simple/price"
     params = {
@@ -405,7 +402,7 @@ def get_coingecko_btc_data():
         st.text(f"Error: {e}")
         return {}
 
-@st.cache_data(ttl=90, show_spinner=False)  # ~90s is fresh enough for intraday
+@st.cache_data(ttl=90, show_spinner=False)
 def history_cached(symbol: str, *, period=None, interval="1d", start=None, end=None):
     """Centralized, memoized wrapper around yfinance.history."""
     try:
@@ -418,12 +415,11 @@ def get_history(_ticker, period):
         now = datetime.now(ZoneInfo("UTC"))
         start = now - timedelta(hours=24)
         df = _ticker.history(start=start, end=now, interval="5m")
-        # Fallback in case provider returns nothing momentarily
         if df is None or df.empty:
             df = _ticker.history(period="1d", interval="5m")
         return df
     else:
-        interval = "5m" if period == "1d" else "1d"  # keeps older callers safe
+        interval = "5m" if period == "1d" else "1d" 
         return history_cached(_ticker.ticker, period=period, interval=interval)
 
 @st.cache_data(ttl=1800) # 30 minutes
@@ -478,6 +474,14 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
             f'<div class="article-title"><a href="{art["url"]}" target="_blank">{html.escape(art["title"])}</a></div>',
             unsafe_allow_html=True
         )
+        src = (art.get("source") or {}).get("name", "")
+        pub = art.get("publishedAt") or ""
+        try:
+            pub = pd.to_datetime(pub, utc=True).tz_convert(ET).strftime("%Y-%m-%d")
+        except Exception:
+            pub = pub[:10]
+
+        st.markdown(f'<div class="article-meta">{src} · {pub}</div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
@@ -1364,47 +1368,33 @@ if tab == "Bitcoin News":
                     
     # General News
     with col2:
-            header, pill = st.columns([1, 0.18])
-            with header:
-                st.subheader("📰 Bitcoin News")
-            with pill:
-                # We pass whatever is currently in session (it will be populated just below)
-                render_section_report_pill(
-                    section_key="news",
-                    items=st.session_state.get("gen_articles", []),
-                    kind="article",
-                    page="Bitcoin News"
-                )   
+        header_slot = st.container()
+        scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
+        gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="news_scope_filter")
 
-            # Pills for filtering
-            scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
-            gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="news_scope_filter")
-    
-            gen_col1, gen_col2 = st.columns([1, 1])
-            with gen_col1:
-                gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="news_days_filter")
-            with gen_col2:
-                gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="news_sort_filter")
+        gen_col1, gen_col2 = st.columns([1, 1])
+        with gen_col1:
+            gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="news_days_filter")
+        with gen_col2:
+            gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="news_sort_filter")
 
-            # Handle query + filtering logic
-            if gen_scope == "CleanSpark Only":
-                query_term = "CleanSpark"
-                exclude_term = None
-                filter_func = None
-            elif gen_scope == "Regulatory Only":
-                query_term = "GENIUS Act OR cryptocurrency legislation OR crypto bill OR digital asset policy"
-                exclude_term = None
-                filter_func = regulatory_article_filter
-            else:  # All Bitcoin
-                query_term = "bitcoin mining"
-                exclude_term = "CleanSpark"
-                filter_func = None
+        if gen_scope == "CleanSpark Only":
+            query_term = "CleanSpark"
+            exclude_term = None
+            filter_func = None
+        elif gen_scope == "Regulatory Only":
+            query_term = "GENIUS Act OR cryptocurrency legislation OR crypto bill OR digital asset policy"
+            exclude_term = None
+            filter_func = regulatory_article_filter
+        else:  
+            query_term = "bitcoin mining"
+            exclude_term = "CleanSpark"
+            filter_func = None
 
-            # Pass in correct params
-            gen_from_days = day_options[gen_days]
-            gen_sort_by = sort_by_map[gen_sort]
+        gen_from_days = day_options[gen_days]
+        gen_sort_by   = sort_by_map[gen_sort]
 
-            load_articles(
+        load_articles(
             key="gen_articles",
             query=query_term,
             exclude=exclude_term,
@@ -1413,6 +1403,18 @@ if tab == "Bitcoin News":
             filter_func=filter_func,
             pill_at="title"
         )
+
+        with header_slot:
+            header, pill = st.columns([1, 0.18])
+            with header:
+                st.subheader("📰 Bitcoin News")
+            with pill:
+                render_section_report_pill(
+                    section_key="news",
+                    items=st.session_state.get("gen_articles", []),
+                    kind="article",
+                    page="Bitcoin News"
+                )
                     
 # --- HOME TAB ---
 if tab == "Live Market":
