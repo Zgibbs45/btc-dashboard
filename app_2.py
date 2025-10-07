@@ -1532,7 +1532,7 @@ if tab == "Live Market":
                     if selected_range == "1d":
                         x_axis = alt.X(
                             "Date:T",
-                            title="Time (ET)",
+                            title="Time (PT)",
                             axis=alt.Axis(labelAngle=45, format="%I:%M %p")
                         )
                     else:
@@ -1553,7 +1553,7 @@ if tab == "Live Market":
                             y=alt.Y("Price:Q", scale=alt.Scale(domain=[min_y, max_y])),
                             tooltip=[
                                 alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
-                                            title="Time (ET)" if selected_range == "1d" else "Date",
+                                            title="Time (PT)" if selected_range == "1d" else "Date",
                                             format="%I:%M %p" if selected_range == "1d" else "%b %d"),
                                 alt.Tooltip("Price:Q", format=",.2f"),
                             ]
@@ -1563,7 +1563,7 @@ if tab == "Live Market":
                             y="Price:Q",
                             tooltip=[
                                 alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
-                                            title="Time (ET)" if selected_range == "1d" else "Date",
+                                            title="Time (PT)" if selected_range == "1d" else "Date",
                                             format="%I:%M %p" if selected_range == "1d" else "%b %d"),
                                 alt.Tooltip("Price:Q", format=",.2f"),
                             ],
@@ -1575,7 +1575,7 @@ if tab == "Live Market":
                         y="Price:Q",
                         tooltip=[
                             alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
-                                        title="Time (ET)" if selected_range == "1d" else "Date",
+                                        title="Time (PT)" if selected_range == "1d" else "Date",
                                         format="%I:%M %p" if selected_range == "1d" else "%b %d"),
                             alt.Tooltip("Price:Q", format=",.2f"),
                         ],
@@ -1700,7 +1700,7 @@ if tab == "Live Market":
             chart_df = chart_df[(chart_df["_n"] % 2 == 0) | (chart_df["_n"] == last_n)].drop(columns="_n")
 
 
-        # Format time for tooltip (ET)
+        # Format time for tooltip (PT)
         if comp_selected_period == "1d":
             chart_df["TimeET"] = chart_df["Date"].dt.strftime("%I:%M %p")
         else:
@@ -1717,7 +1717,7 @@ if tab == "Live Market":
 
         label_angle = 45 if comp_selected_period == "1d" else 0
 
-        tooltip_title = "Time (ET)" if comp_selected_period == "1d" else "Date"
+        tooltip_title = "Time (PT)" if comp_selected_period == "1d" else "Date"
 
         points = alt.Chart(chart_df).mark_circle(size=40).encode(
             x=alt.X("Date:T") if comp_selected_period == "1d" else alt.X("Date_Day:T"),
@@ -1726,7 +1726,7 @@ if tab == "Live Market":
             tooltip=[
                 alt.Tooltip(
                     "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                    title="Time (PT)" if comp_selected_period == "1d" else "Date",
                     format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
                 ),
                 alt.Tooltip("Price:Q", format=",.2f"),
@@ -1737,7 +1737,7 @@ if tab == "Live Market":
         if comp_selected_period == "1d":
             x_axis_comp = alt.X(
                 "Date:T",
-                title="Time (ET)",
+                title="Time (PT)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
                 # scale=None  # ← delete this line
             )
@@ -1760,7 +1760,7 @@ if tab == "Live Market":
             tooltip=[
                 alt.Tooltip(
                     "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                    title="Time (ET)" if comp_selected_period == "1d" else "Date",
+                    title="Time (PT)" if comp_selected_period == "1d" else "Date",
                     format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
                 ),
                 alt.Tooltip("Price:Q", format=",.2f"),
