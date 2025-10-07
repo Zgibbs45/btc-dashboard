@@ -122,6 +122,15 @@ st.markdown("""
 /* Cap each tweet's content width (similar to Twitter’s ~680px) */
 .tweet-block { max-width: 680px; }
 
+<style>
+/* Prevent long tokens (URLs, @mentions chains) from spilling into the next column */
+.tweet-block, .tweet-block * {
+  overflow-wrap: anywhere;   /* modern */
+  word-break: break-word;    /* fallback */
+  hyphens: auto;
+}
+</style>
+
 /* Responsive media grid */
 .media-grid { display: grid; gap: 6px; margin-top: 8px; width: 100%; }
 .media-grid.cols-1 { grid-template-columns: 1fr; }
@@ -1356,7 +1365,7 @@ if tab == "Bitcoin News":
                     <div style="flex:1 1 auto;">
                         <div style="font-weight:600;">{tweet['name']}</div>
                         <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
-                        <div style="margin-top:6px; font-size:15px; line-height:1.5;">{final_text}</div>
+                        <div style="margin-top:6px; font-size:15px; line-height:1.5; overflow-wrap:anywhere; word-break:break-word; hyphens:auto;">{final_text}</div>
                         <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
                         <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
                     </div>
