@@ -24,8 +24,14 @@ st.set_page_config(layout="wide")
 
 st.markdown("""
 <style>
-.article-title { margin: 0; font-weight: 600; font-size: 16px; line-height: 1.4; }
-.article-meta  { color:#6b7280; font-size:13px; margin:2px 0 0; }
+.article-title { margin: 0; font-weight: 600; font-size: 16px; line-height: 1.35; }
+.article-title a { text-decoration-thickness: 1px; }
+.article-meta  { color:#6b7280; font-size:13px; margin:2px 0 0; } /* no extra gap */
+
+.article-actions{
+  display:flex; justify-content:flex-end; align-items:center; height:100%;
+  margin:0; padding:0;           /* keeps pill on the same baseline as title */
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -400,14 +406,15 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
     for art in st.session_state[key]:
         left, right = st.columns([100, 10])
         with left:
-            st.markdown(
-                f'<div class="article-title"><a href="{art["url"]}" target="_blank">{html.escape(art["title"])}</a></div>',
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="article-title"><a href="{art["url"]}" target="_blank">{html.escape(art["title"])}</a></div>',
+                        unsafe_allow_html=True)
         with right:
-            st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
+            # right-rail wrapper ensures right-align AND vertical centering
+            st.markdown('<div class="article-actions">', unsafe_allow_html=True)
             news_feedback_popover(art, page="Bitcoin News")
             st.markdown('</div>', unsafe_allow_html=True)
+
+        # Tight meta directly under the title (no added spacing)
         st.markdown(
             f'<div class="article-meta">Source: {art["source"]["name"]} · {art["publishedAt"][:10]}</div>',
             unsafe_allow_html=True
