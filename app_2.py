@@ -281,6 +281,77 @@ def github_create_issue(title: str, body: str, labels=None, assignees=None):
     except Exception as e:
         return False, str(e)
 
+def _short(s: str, n: int = 72) -> str:
+    s = re.sub(r"\s+", " ", (s or "").replace("\n", " ")).strip()
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+def _fmt_tweet_option(t: dict) -> str:
+    who = t.get("name") or t.get("username") or "Unknown"
+    text = re.sub(r"https://t\.co/\S+$", "", t.get("text", "")).strip()
+    return f'{who} — "{_short(text)}"'
+
+def _fmt_article_option(a: dict) -> str:
+    src   = (a.get("source") or {}).get("name", "Source")
+    title = a.get("title", "")
+    return f"{src} — {_short(title)}"
+
+def render_section_report_pill(*, section_key: str, items: list[dict], kind: str, page: str):
+    """
+    Renders a single 'Report' pill that opens a form.
+    kind: 'tweet' or 'article'
+    items: the items currently shown in the section (what the user sees)
+    """
+    pop = getattr(st, "popover", None)
+    ctx = pop("Report") if callable(pop) else st.expander("Report", expanded=False)
+
+    with ctx:
+        label = f"What {kind} do you want to report?"
+        format_func = _fmt_tweet_option if kind == "tweet" else _fmt_article_option
+
+        with st.form(f"report-{section_key}", clear_on_submit=True):
+            selected = st.selectbox(
+                label,
+                options=items,
+                format_func=format_func,
+                key=f"select-{section_key}",
+                placeholder=f"Select a {kind}…"
+            )
+
+            issue = st.selectbox(
+                "Type",
+                ["Spam", "Broken link", "Not relevant", "Low-quality source", "Misleading headline", "Other"],
+                key=f"type-{section_key}",
+            )
+            note = st.text_area("Details (optional)", key=f"note-{section_key}", height=88)
+
+            if st.form_submit_button("Send"):
+                if kind == "tweet":
+                    tid  = selected.get("tweet_id", "")
+                    turl = f"https://x.com/i/web/status/{tid}" if tid else ""
+                    log_feedback({
+                        "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
+                        "page": page,
+                        "tweet_id": tid,
+                        "username": selected.get("username", ""),
+                        "tweet_url": turl,
+                        "issue": issue,
+                        "note": (note or "").strip(),
+                    })
+                else:  # article
+                    src = (selected.get("source") or {}).get("name", "")
+                    url = selected.get("url", "")
+                    title = selected.get("title", "")
+                    log_feedback({
+                        "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
+                        "page": page,
+                        "tweet_id": "",                # keep empty for articles
+                        "username": src,               # store news source here
+                        "tweet_url": url,              # store article URL here
+                        "issue": issue + (f" — {title[:80]}" if title else ""),
+                        "note": (note or "").strip(),
+                    })
+                st.success("Thanks! Logged.")
+
 def format_timestamp(iso_string):
     dt = date_parser.parse(iso_string).astimezone(ZoneInfo("UTC"))
     now = datetime.now(ZoneInfo("UTC"))
@@ -402,66 +473,11 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
     if filter_func:
         batch = [a for a in batch if filter_func(a)]
     st.session_state[key] = batch[:PAGE_SIZE]
-
     for art in st.session_state[key]:
-        left, right = st.columns([100, 10])
-        with left:
-            st.markdown(f'<div class="article-title"><a href="{art["url"]}" target="_blank">{html.escape(art["title"])}</a></div>',
-                        unsafe_allow_html=True)
-        with right:
-            # right-rail wrapper ensures right-align AND vertical centering
-            st.markdown('<div class="article-actions">', unsafe_allow_html=True)
-            news_feedback_popover(art, page="Bitcoin News")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # Tight meta directly under the title (no added spacing)
         st.markdown(
-            f'<div class="article-meta">Source: {art["source"]["name"]} · {art["publishedAt"][:10]}</div>',
+            f'<div class="article-title"><a href="{art["url"]}" target="_blank">{html.escape(art["title"])}</a></div>',
             unsafe_allow_html=True
         )
-
-def news_feedback_popover(article: dict, page: str = "Bitcoin News"):
-    import hashlib
-    url = article.get("url", "")
-    src = (article.get("source") or {}).get("name", "")
-    title = article.get("title", "")
-
-    # stable, short id from URL for unique widget keys
-    aid = hashlib.md5(url.encode("utf-8")).hexdigest()[:8]
-
-    pop = getattr(st, "popover", None)
-    # popover on newer Streamlit, nice fallback on older
-    try:
-        ctx = pop("⋯") if callable(pop) else st.expander("⋯", expanded=False)
-    except TypeError:
-        ctx = st.expander("⋯", expanded=False)
-
-    with ctx:
-        st.markdown("**Report an issue with this article**")
-        with st.form(f"news_fb_{aid}", clear_on_submit=True):
-            issue = st.selectbox(
-                "Type",
-                ["Paywalled", "Broken link", "Not relevant", "Low-quality source",
-                 "Misleading headline", "Other"],
-                key=f"news_type_{aid}",
-            )
-            note = st.text_area(
-                "Details (optional)",
-                key=f"news_note_{aid}",
-                placeholder="Tell us what you saw…",
-            )
-            if st.form_submit_button("Send"):
-                # Reuse the same CSV schema. Leave tweet_id blank; store source+URL.
-                log_feedback({
-                    "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
-                    "page": page,
-                    "tweet_id": "",                # (empty for articles)
-                    "username": src,               # store news source here
-                    "tweet_url": url,              # store article URL here
-                    "issue": issue + f" — {title[:80]}",
-                    "note": (note or "").strip(),
-                })
-                st.success("Thanks! Logged.")
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
@@ -1348,7 +1364,17 @@ if tab == "Bitcoin News":
                     
     # General News
     with col2:
-            st.subheader("📰 Bitcoin News")
+            header, pill = st.columns([1, 0.18])
+            with header:
+                st.subheader("📰 Bitcoin News")
+            with pill:
+                # We pass whatever is currently in session (it will be populated just below)
+                render_section_report_pill(
+                    section_key="news",
+                    items=st.session_state.get("gen_articles", []),
+                    kind="article",
+                    page="Bitcoin News"
+                )   
 
             # Pills for filtering
             scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
