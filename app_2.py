@@ -19,7 +19,15 @@ from dateutil import parser as date_parser
 from dateutil.parser import parse as parse_date
 from urllib.parse import quote
 
+#STYLES
 st.set_page_config(layout="wide")
+
+st.markdown("""
+<style>
+.article-title { margin: 0; font-weight: 600; font-size: 16px; line-height: 1.4; }
+.article-meta  { color:#6b7280; font-size:13px; margin:2px 0 0; }
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown(
     """
@@ -390,26 +398,20 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
     st.session_state[key] = batch[:PAGE_SIZE]
 
     for art in st.session_state[key]:
-        if pill_at == "title":
-            # Option 2: pill aligned with HEADLINE (your mock #2)
-            left, right = st.columns([100, 10])
-            with left:
-                st.markdown(f"**[{art['title']}]({art['url']})**")
-            with right:
-                st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
-                news_feedback_popover(art, page="Bitcoin News")
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
-        else:
-            # Option 1: pill aligned with SOURCE line (your mock #1)
-            st.markdown(f"**[{art['title']}]({art['url']})**")
-            left, right = st.columns([100, 10])
-            with left:
-                st.caption(f"Source: {art['source']['name']} | {art['publishedAt'][:10]}")
-            with right:
-                st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
-                news_feedback_popover(art, page="Bitcoin News")
-                st.markdown('</div>', unsafe_allow_html=True)
+        left, right = st.columns([100, 10])
+        with left:
+            st.markdown(
+                f'<div class="article-title"><a href="{art["url"]}" target="_blank">{html.escape(art["title"])}</a></div>',
+                unsafe_allow_html=True
+            )
+        with right:
+            st.markdown('<div style="display:flex; justify-content:flex-end;">', unsafe_allow_html=True)
+            news_feedback_popover(art, page="Bitcoin News")
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="article-meta">Source: {art["source"]["name"]} · {art["publishedAt"][:10]}</div>',
+            unsafe_allow_html=True
+        )
 
 def news_feedback_popover(article: dict, page: str = "Bitcoin News"):
     import hashlib
@@ -1370,14 +1372,14 @@ if tab == "Bitcoin News":
             gen_sort_by = sort_by_map[gen_sort]
 
             load_articles(
-                key="gen_articles",
-                query=query_term,
-                exclude=exclude_term,
-                from_days=gen_from_days,
-                sort_by=gen_sort_by,
-                filter_func=filter_func,
-                pill_at="source"
-            )
+            key="gen_articles",
+            query=query_term,
+            exclude=exclude_term,
+            from_days=gen_from_days,
+            sort_by=gen_sort_by,
+            filter_func=filter_func,
+            pill_at="title"
+        )
                     
 # --- HOME TAB ---
 if tab == "Live Market":
