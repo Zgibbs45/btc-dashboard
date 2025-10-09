@@ -1303,6 +1303,25 @@ if tab == "Bitcoin News":
         for tweet in tweets:
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
             clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
+            final_text = html.escape(clean_text).replace("\n", "<br>")
+
+        with st.container():
+            st.markdown(f"""
+            <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
+                <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
+                <div style="flex:1 1 auto;">
+                    <div style="font-weight:600;">{tweet['name']}</div>
+                    <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
+                    <div style="margin-top:6px; font-size:15px; line-height:1.5; overflow-wrap:anywhere; word-break:break-word; hyphens:auto;">{final_text}</div>
+                    <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
+                    <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Render media grid (kept compact)
+            render_tweet_media(tweet["media"])
+            st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
 
                                 
     # General News
