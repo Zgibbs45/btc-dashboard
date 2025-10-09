@@ -355,11 +355,11 @@ def render_section_report_pill(*, section_key: str, items: list[dict], kind: str
                 st.success("Thanks! Logged.")
 
 def format_timestamp(iso_string):
-    dt = date_parser.parse(iso_string).astimezone(ZoneInfo("UTC"))
-    now = datetime.now(ZoneInfo("UTC"))
+    dt = date_parser.parse(iso_string).astimezone(PT)
+    now = datetime.now(PT)
     delta = now - dt
 
-    nice_time = dt.strftime("%B %d, %I:%M %p").lstrip("0").replace(" 0", " ")
+    nice_time = dt.strftime("%B %d, %I:%M %p PT").lstrip("0").replace(" 0", " ")
 
     seconds = int(delta.total_seconds())
     if seconds < 60:
@@ -884,7 +884,7 @@ def get_available_filing_quarters(tickers, year=None):
         # Use a reliable financial tag (like revenue) to extract report periods
         url = f"https://data.sec.gov/api/xbrl/companyconcept/CIK{cik_clean}/us-gaap/Revenues.json"
         try:
-            resp = requests.get(url, headers=headers)
+            resp = requests.get(url, headers=headers, timeout=15)
             if resp.status_code != 200:
                 continue
             data = resp.json()
@@ -926,7 +926,7 @@ def get_latest_edgar_inline_url(cik, accn=None):
     url = f"https://data.sec.gov/submissions/CIK{cik_clean}.json"
     headers = {"User-Agent": "CleanSpark Dashboard <zgibbs@cleanspark.com>"}
     try:
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(url, headers=headers, timeout=15)
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -1304,31 +1304,7 @@ if tab == "Bitcoin News":
             translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
             clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
 
-            def custom_escape(text):
-                text = text.replace("&", "<<<AMP>>>")  
-                text = html.escape(text)
-                return text.replace("<<<AMP>>>", "&")
-
-            final_text = html.escape(clean_text).replace("\n", "<br>")
-
-            with st.container():
-                st.markdown(f"""
-                <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
-                    <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
-                    <div style="flex:1 1 auto;">
-                        <div style="font-weight:600;">{tweet['name']}</div>
-                        <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
-                        <div style="margin-top:6px; font-size:15px; line-height:1.5; overflow-wrap:anywhere; word-break:break-word; hyphens:auto;">{final_text}</div>
-                        <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
-                        <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                render_tweet_media(tweet["media"])
-                st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
-
-                    
+                                
     # General News
     with col2:
         header_slot = st.container()
@@ -1381,7 +1357,6 @@ if tab == "Bitcoin News":
                     
 # --- HOME TAB ---
 if tab == "Live Market":
-    btc_metrics = get_coingecko_btc_data()
     btc         = yf.Ticker("BTC-USD")
     raw_sym = st.session_state.get("stock_lookup_ticker")
     sym = (raw_sym or "CLSK").strip().upper()  # <-- never empty
@@ -1619,17 +1594,6 @@ if tab == "Live Market":
                         )
                     ).properties(width="container", height=400, title=f"{sym} Price")
 
-                    points = alt.Chart(stock_close).mark_circle(size=40).encode(
-                        x=x_axis,                      # <— use the same x spec as the line
-                        y="Price:Q",
-                        tooltip=[
-                            alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
-                                        title="Time (PT)" if selected_range == "1d" else "Date",
-                                        format="%I:%M %p" if selected_range == "1d" else "%b %d"),
-                            alt.Tooltip("Price:Q", format=",.2f"),
-                        ],
-                    )
-
                     st.altair_chart(stock_chart, use_container_width=True)
                     
                 else:
@@ -1765,21 +1729,6 @@ if tab == "Live Market":
         label_angle = 45 if comp_selected_period == "1d" else 0
 
         tooltip_title = "Time (PT)" if comp_selected_period == "1d" else "Date"
-
-        points = alt.Chart(chart_df).mark_circle(size=40).encode(
-            x=alt.X("Date:T") if comp_selected_period == "1d" else alt.X("Date_Day:T"),
-            y="Price:Q",
-            color="Ticker:N",
-            tooltip=[
-                alt.Tooltip(
-                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                    title="Time (PT)" if comp_selected_period == "1d" else "Date",
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
-                ),
-                alt.Tooltip("Price:Q", format=",.2f"),
-                alt.Tooltip("Ticker:N"),
-            ],
-        )
         
         if comp_selected_period == "1d":
             x_axis_comp = alt.X(
