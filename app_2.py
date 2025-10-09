@@ -1789,10 +1789,11 @@ if tab == "Live Market":
         if comp_selected_period == "1d":
             x_axis_comp = alt.X(
                 "Date:T",
-                title="Time (PT)",
+                title="Time (ET)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
-                # scale=None  # ← delete this line
             )
+            time_title = "Time (ET)"
+            time_fmt = "%I:%M %p"
         else:
             x_axis_comp = alt.X(
                 "Date_Day:T",
@@ -1804,27 +1805,39 @@ if tab == "Live Market":
                     tickCount={"interval": "day", "step": 1},
                 ),
             )
+            time_title = "Date"
+            time_fmt = "%b %d"
 
         line = alt.Chart(chart_df).mark_line().encode(
             x=x_axis_comp,
             y=alt.Y("Price:Q", scale=y_scale),
             color="Ticker:N",
             tooltip=[
-                alt.Tooltip(
-                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                    title="Time (PT)" if comp_selected_period == "1d" else "Date",
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
-                ),
+                alt.Tooltip("Date:T" if comp_selected_period == "1d" else "Date_Day:T",
+                            title=time_title, format=time_fmt),
                 alt.Tooltip("Price:Q", format=",.2f"),
                 alt.Tooltip("Ticker:N"),
             ],
         )
 
-        st.altair_chart((line).properties(
-            width="container",
-            height=400,
-            title="Stock Price Comparison"
-        ), use_container_width=True)
+        # NOTE: build points *after* x_axis_comp and reuse the same X encoding
+        points = alt.Chart(chart_df).mark_circle(size=40).encode(
+            x=x_axis_comp,
+            y="Price:Q",
+            color="Ticker:N",
+            tooltip=[
+                alt.Tooltip("Date:T" if comp_selected_period == "1d" else "Date_Day:T",
+                            title=time_title, format=time_fmt),
+                alt.Tooltip("Price:Q", format=",.2f"),
+                alt.Tooltip("Ticker:N"),
+            ],
+        )
+
+        st.altair_chart(
+            (line + points).properties(width="container", height=400, title="Stock Price Comparison"),
+            use_container_width=True
+        )
+
     else:
         st.info("No data available for selected tickers/time range.")
 
