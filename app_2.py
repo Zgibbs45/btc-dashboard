@@ -195,8 +195,7 @@ details > summary {
 </style>
 """, unsafe_allow_html=True)
 
-
-ET = pytz.timezone("America/New_York")
+PT = ZoneInfo("US/Pacific")
 
 NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
 TWITTER_BEARER_TOKEN = st.secrets["TWITTER_BEARER_TOKEN"]
@@ -482,7 +481,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         src = (art.get("source") or {}).get("name", "")
         pub = art.get("publishedAt") or ""
         try:
-            pub = pd.to_datetime(pub, utc=True).tz_convert(ET).strftime("%Y-%m-%d")
+            pub = pd.to_datetime(pub, utc=True).tz_convert(PT).strftime("%Y-%m-%d")
         except Exception:
             pub = pub[:10]
 
@@ -1142,10 +1141,10 @@ if tab == "Bitcoin News":
             def fmt_usd(n):
                 return f"${n:,.0f}" if n is not None else "—"
 
-            def fmt_time_et(iso):
+            def fmt_time_pt(iso):
                 try:
-                    ts = pd.to_datetime(iso, utc=True).tz_convert(ET)
-                    return ts.strftime("%Y-%m-%d %I:%M %p ET")
+                    ts = pd.to_datetime(iso, utc=True).tz_convert(PT)
+                    return ts.strftime("%Y-%m-%d %I:%M %p PT")
                 except Exception:
                     return "—"
 
@@ -1538,21 +1537,19 @@ if tab == "Live Market":
                     stock_close["Date"] = pd.to_datetime(stock_close["Date"])
 
                     if selected_range == "1d":
-                        # intraday: ET-aware
                         if stock_close["Date"].dt.tz is None:
                             stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
-                        stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Eastern")
+                        stock_close["Date"] = stock_close["Date"].dt.tz_convert("US/Pacific")
                         stock_close["Label"] = stock_close["Date"].dt.strftime("%I:%M %p")
                         order_col = "Date"
                     else:
-                        # daily ranges: align the CALENDAR DAY to ET, then drop tz so Vega-Lite won’t shift
                         if stock_close["Date"].dt.tz is None:
                             stock_close["Date"] = stock_close["Date"].dt.tz_localize("UTC")
                         stock_close["Date_Day"] = (
                             stock_close["Date"]
-                            .dt.tz_convert("US/Eastern")   # move to ET first
-                            .dt.normalize()                 # midnight ET
-                            .dt.tz_localize(None)           # strip tz for stable Altair rendering
+                            .dt.tz_convert("US/Pacific") 
+                            .dt.normalize()            
+                            .dt.tz_localize(None)         
                         )
                         order_col = "Date_Day"
 
@@ -1716,18 +1713,16 @@ if tab == "Live Market":
         chart_df = combined_df.reset_index()
         chart_df.rename(columns={chart_df.columns[0]: "Date"}, inplace=True)
 
-        # Convert to Eastern Time (tz-aware)
         chart_df["Date"] = pd.to_datetime(chart_df["Date"])
         if chart_df["Date"].dt.tz is None:
             chart_df["Date"] = chart_df["Date"].dt.tz_localize("UTC")
-        chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Eastern")
+        chart_df["Date"] = chart_df["Date"].dt.tz_convert("US/Pacific")
 
         if comp_selected_period != "1d":
-            # daily ranges: keep the *calendar day in ET*, then drop tz
             chart_df["Date_Day"] = (
                 chart_df["Date"]
-                .dt.normalize()         # midnight ET
-                .dt.tz_localize(None)   # make it tz-naive so Altair won't shift to UTC
+                .dt.normalize()         
+                .dt.tz_localize(None)  
             )
 
         # Sort by the same column we’ll plot on X
