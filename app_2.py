@@ -1770,6 +1770,21 @@ if tab == "Live Market":
         label_angle = 45 if comp_selected_period == "1d" else 0
 
         tooltip_title = "Time (PT)" if comp_selected_period == "1d" else "Date"
+
+        points = alt.Chart(chart_df).mark_circle(size=40).encode(
+            x=alt.X("Date:T") if comp_selected_period == "1d" else alt.X("Date_Day:T"),
+            y="Price:Q",
+            color="Ticker:N",
+            tooltip=[
+                alt.Tooltip(
+                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
+                    title="Time (PT)" if comp_selected_period == "1d" else "Date",
+                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
+                ),
+                alt.Tooltip("Price:Q", format=",.2f"),
+                alt.Tooltip("Ticker:N"),
+            ],
+        )
         
         if comp_selected_period == "1d":
             x_axis_comp = alt.X(
