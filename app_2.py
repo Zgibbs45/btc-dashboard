@@ -1784,10 +1784,10 @@ if tab == "Live Market":
         if comp_selected_period == "1d":
             x_axis_comp = alt.X(
                 "Date:T",
-                title="Time (ET)",
+                title="Time (PT)",
                 axis=alt.Axis(labelAngle=45, format="%I:%M %p"),
             )
-            time_title = "Time (ET)"
+            time_title = "Time (PT)"
             time_fmt = "%I:%M %p"
         else:
             x_axis_comp = alt.X(
