@@ -10,10 +10,8 @@ import re
 import html
 import altair as alt
 import math
+import csv
 from zoneinfo import ZoneInfo
-from pycoingecko import CoinGeckoAPI
-from PIL import Image
-import csv, os
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from dateutil.parser import parse as parse_date
@@ -116,32 +114,31 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-#Tweet Image Format
+# Tweet Image Format
 st.markdown("""
 <style>
-/* Cap text like Twitter */
+/* Cap tweet text width like Twitter */
 .tweet-block { max-width: 680px; }
 
 /* Align media under the text (48px avatar + 12px gap = 60px indent) */
 .media-grid {
   display: grid; gap: 6px;
-  margin: 8px 0 0 60px;             /* indent under the text */
+  margin: 8px 0 0 60px;
   width: calc(100% - 60px);
-  max-width: 680px;                 /* don’t exceed tweet width */
+  max-width: 680px;
 }
-/* Grid templates */
-.media-grid.cols-1 { grid-template-columns: 1fr; }
-.media-grid.cols-2,
-.media-grid.cols-3,                 /* treat 3 like a compact 2-col grid */
-.media-grid.cols-4 { grid-template-columns: 1fr 1fr; }
 
-/* Cropped tiles */
+.media-grid.cols-1 { grid-template-columns: 1fr; }
+.media-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+
 .media { position: relative; overflow: hidden; border-radius: 12px; background: #f1f5f9; }
 .media img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Aspect ratios */
 .media.ratio-16x9 { aspect-ratio: 16 / 9; }
 .media.ratio-1x1  { aspect-ratio: 1 / 1; }
+
+/* Prevent long tokens from bleeding into the news column */
+.tweet-block, .tweet-block * { overflow-wrap:anywhere; word-break:break-word; hyphens:auto; }
 
 @media (max-width: 720px) {
   .tweet-block, .media-grid { max-width: 100%; margin-left: 0; width: 100%; }
@@ -395,7 +392,7 @@ def get_coingecko_btc_data():
     }
 
     try:
-        resp = requests.get(url, params=params, headers=headers)
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json()["bitcoin"]
         return {
@@ -444,7 +441,7 @@ def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=
         url += f"&domains={domain_str}"
 
     try:
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=15)
         if resp.status_code != 200:
             st.warning(f"NewsAPI Error {resp.status_code}: {resp.json().get('message', 'Unknown error')}")
             return []
@@ -452,6 +449,7 @@ def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=
     except Exception as e:
         st.error(f"NewsAPI request failed: {e}")
         return []
+    
 
 def regulatory_article_filter(article):
     t = (article.get("title") or "").strip().lower()
@@ -493,14 +491,12 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
     headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
-
     if query_scope == "CleanSpark":
-        query = '("CleanSpark" OR #CLSK OR CLSK) -is:retweet has:links'
+        query = '("CleanSpark" OR #CLSK OR CLSK) -is:retweet (has:links OR has:media OR has:images)'
     else:
-        query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet has:links'
+        query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet (has:links OR has:media OR has:images)'
 
     from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-
     url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
         "query": query,
@@ -512,14 +508,13 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
         "user.fields": "username,name,profile_image_url"
     }
 
-    # Retry logic
     for attempt in range(3):
-        response = requests.get(url, headers=headers, params=params)
-        if response.status_code == 429:
-            st.warning("Twitter rate limit hit. Retrying in 60 seconds...")
+        response = requests.get(url, headers=headers, params=params, timeout=15)
+        if response.status_code == 429 and attempt < 2:
+            st.warning("Twitter rate limit hit. Retrying in 60 seconds…")
             time.sleep(60)
-        else:
-            break
+            continue
+        break
 
     if response.status_code != 200:
         st.error(f"Twitter API Error: {response.status_code} — {response.text}")
@@ -532,7 +527,6 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
     today = datetime.now(ZoneInfo("UTC")).date()
     
     if max_age_days > 1:
-    # keep anything within the rolling N-day window
         filtered = []
         for t in tweets:
             if "created_at" not in t:
@@ -580,24 +574,21 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="lik
 
     return results[:max_results]
     
+@st.cache_data(ttl=3600, show_spinner=False)
 def translate_text(text, api_key, target="en"):
-    if not text or not text.strip():
+    if not text or not text.strip() or not api_key:
         return text
     try:
         r = requests.post(
             "https://translation.googleapis.com/language/translate/v2",
-            params={"key": api_key},  # <-- key in query string
-            json={"q": text, "target": target, "format": "text"}  # safer than form-encoded
+            params={"key": api_key},
+            json={"q": text, "target": target, "format": "text"},
+            timeout=10,
         )
         r.raise_for_status()
-        data = r.json()["data"]["translations"][0]
-        # Google returns HTML-escaped text; unescape so your HTML-escaping later is clean
-        return html.unescape(data["translatedText"])
-    except Exception as e:
-        # optional: flip this flag in session_state if you want to see errors
-        if st.session_state.get("debug_translate", False):
-            st.error(f"Translate failed: {e}")
-        return text  # graceful fallback
+        return html.unescape(r.json()["data"]["translations"][0]["translatedText"])
+    except Exception:
+        return text
     
 def twitter_img_variant(url: str, size: str = "medium") -> str:
     # pbs.twimg.com returns multiple sizes via the "name=" query param
@@ -669,32 +660,6 @@ def log_feedback(entry: dict):
     except Exception as e:
         if st.session_state.get("debug_feedback"):
             st.info(f"Saved to CSV; GitHub mirror error: {e}")
-
-def feedback_popover(tweet: dict, page: str):
-    tid = tweet.get("tweet_id", "")
-    turl = f"https://x.com/i/web/status/{tid}"
-    pop = getattr(st, "popover", None)
-    if callable(pop):
-        try:
-            ctx = pop("⋯")     # ≤ some Streamlit versions: no `key` arg
-        except TypeError:
-            ctx = st.expander("⋯", expanded=False)
-    else:
-        ctx = st.expander("⋯", expanded=False)
-    with ctx:
-        st.markdown("**Report an issue with this tweet**")
-        with st.form(f"fb_form_{tid}", clear_on_submit=True):
-            issue = st.selectbox("Type",
-                                 ["No image","Broken link","Translation wrong","Bad source","Spam","Other"],
-                                 key=f"fb_type_{tid}")
-            note = st.text_area("Details (optional)", key=f"fb_note_{tid}", placeholder="Tell us what you saw…")
-            if st.form_submit_button("Send"):
-                log_feedback({
-                    "timestamp_utc": datetime.utcnow().isoformat(timespec="seconds"),
-                    "page": page, "tweet_id": tid, "username": tweet.get("username",""),
-                    "tweet_url": turl, "issue": issue, "note": (note or "").strip()
-                })
-                st.success("Thanks! Logged for review.")
 
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
@@ -811,7 +776,7 @@ def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_dura
     for tag in tags:
         url = f"https://data.sec.gov/api/xbrl/companyconcept/CIK{cik_clean}/{tag.replace(':', '/')}.json"
         try:
-            resp = requests.get(url, headers=headers)
+            resp = requests.get(url, headers=headers, timeout=15)
             if resp.status_code != 200:
                 continue
 
@@ -875,7 +840,7 @@ def load_cik_map():
     url = "https://www.sec.gov/files/company_tickers.json"
     headers = {"User-Agent": "CleanSpark Dashboard <zgibbs@cleanspark.com>"}
     try:
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(url, headers=headers, timeout=15)
         data = resp.json()
         # Build a simple lookup: {"MARA": "0001507605", ...}
         return {item["ticker"]: str(item["cik_str"]).zfill(10) for item in data.values()}
@@ -1690,7 +1655,7 @@ if tab == "Live Market":
         st.markdown("<hr>", unsafe_allow_html=True)
 
 
-    st.subheader("Live Competition View")
+    st.subheader("📊 Live Competition View")
     competitors = get_competitor_prices(competitor_tickers)
 
     m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12, m13= st.columns(13)
@@ -1805,21 +1770,6 @@ if tab == "Live Market":
         label_angle = 45 if comp_selected_period == "1d" else 0
 
         tooltip_title = "Time (PT)" if comp_selected_period == "1d" else "Date"
-
-        points = alt.Chart(chart_df).mark_circle(size=40).encode(
-            x=alt.X("Date:T") if comp_selected_period == "1d" else alt.X("Date_Day:T"),
-            y="Price:Q",
-            color="Ticker:N",
-            tooltip=[
-                alt.Tooltip(
-                    "Date:T" if comp_selected_period == "1d" else "Date_Day:T",
-                    title="Time (PT)" if comp_selected_period == "1d" else "Date",
-                    format="%I:%M %p" if comp_selected_period == "1d" else "%b %d",
-                ),
-                alt.Tooltip("Price:Q", format=",.2f"),
-                alt.Tooltip("Ticker:N"),
-            ],
-        )
         
         if comp_selected_period == "1d":
             x_axis_comp = alt.X(
@@ -1855,7 +1805,7 @@ if tab == "Live Market":
             ],
         )
 
-        st.altair_chart((line + points).properties(
+        st.altair_chart((line).properties(
             width="container",
             height=400,
             title="Stock Price Comparison"
