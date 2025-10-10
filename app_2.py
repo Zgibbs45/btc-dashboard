@@ -488,87 +488,116 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         st.markdown(f'<div class="article-meta">{src} · {pub}</div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=1800)
-def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
+def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=15):
+    """
+    Fetch recent tweets then sort locally by engagement.
+    Uses pagination so popular tweets older than the most recent 100 still appear.
+    """
     headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
+
+    # Avoid cashtag operator ($CLSK) – not available on some tiers.
+    # Plain CLSK matches $CLSK tokens in text.
     if query_scope == "CleanSpark":
-        query = '(("CleanSpark" OR #CLSK OR $CLSK OR CLSK) -is:retweet (has:links OR has:media OR has:images)) lang:en'
+        query = '(("CleanSpark" OR #CLSK OR CLSK) -is:retweet (has:links OR has:media OR has:images)) lang:en'
     else:
-        query = '((bitcoin OR BTC OR $BTC OR #BTC OR mining OR crypto) -is:retweet (has:links OR has:media OR has:images)) lang:en'
-
-    from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    url = "https://api.twitter.com/2/tweets/search/recent"
-    params = {
-        "query": query,
-        "max_results": 100,
-        "tweet.fields": "public_metrics,created_at,author_id,entities",
-        "start_time": from_date,
-        "expansions": "attachments.media_keys,author_id",
-        "media.fields": "url,preview_image_url,type",
-        "user.fields": "username,name,profile_image_url"
-    }
-
-    for attempt in range(3):
-        response = requests.get(url, headers=headers, params=params, timeout=15)
-        if response.status_code == 429 and attempt < 2:
-            st.warning("Twitter rate limit hit. Retrying in 60 seconds…")
-            time.sleep(60)
-            continue
-        break
-
-    if response.status_code != 200:
-        st.error(f"Twitter API Error: {response.status_code} — {response.text}")
-        return []
-
-    data = response.json()
-    tweets = data.get("data", [])
+        query = '((bitcoin OR BTC OR #BTC OR mining OR crypto) -is:retweet (has:links OR has:media OR has:images)) lang:en'
 
     cutoff = datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)
-    today = datetime.now(ZoneInfo("UTC")).date()
-    
-    if max_age_days > 1:
-        filtered = []
-        for t in tweets:
-            if "created_at" not in t:
-                continue
-            dt = parse_date(t["created_at"])
-            if dt >= cutoff:
-                filtered.append(t)
-        tweets = filtered
-    else:
-        tweets = [
-            t for t in tweets
-            if "created_at" in t and parse_date(t["created_at"]) >= cutoff
-        ]
+    url = "https://api.twitter.com/2/tweets/search/recent"
 
-    users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
-    media_map = {m["media_key"]: m for m in data.get("includes", {}).get("media", [])}
-    
-    # Build full tweet results
+    base_params = {
+        "query": query,
+        "max_results": 100,  # full page
+        "tweet.fields": "public_metrics,created_at,author_id,entities,lang",
+        "start_time": cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "expansions": "attachments.media_keys,author_id",
+        "media.fields": "url,preview_image_url,type",
+        "user.fields": "username,name,profile_image_url",
+    }
+
+    all_tweets = []
+    users_by_id = {}
+    media_by_key = {}
+
+    next_token = None
+    pages = 0
+    while True:
+        params = dict(base_params)
+        if next_token:
+            params["next_token"] = next_token
+
+        response = requests.get(url, headers=headers, params=params, timeout=15)
+        if response.status_code != 200:
+            # Return whatever we've collected so far rather than hard fail
+            break
+
+        payload = response.json()
+        page_tweets = payload.get("data", []) or []
+        includes = payload.get("includes", {}) or {}
+
+        for u in includes.get("users", []) or []:
+            users_by_id[u["id"]] = u
+        for m in includes.get("media", []) or []:
+            if "media_key" in m:
+                media_by_key[m["media_key"]] = m
+
+        all_tweets.extend(page_tweets)
+        pages += 1
+
+        meta = payload.get("meta", {}) or {}
+        next_token = meta.get("next_token")
+
+        # stop if no more pages, enough pages, or oldest tweet on this page is beyond cutoff
+        if not next_token or pages >= 5:
+            break
+        try:
+            oldest = min((date_parser.parse(t["created_at"]) for t in page_tweets), default=None)
+            if oldest and oldest < cutoff:
+                break
+        except Exception:
+            pass
+
+    # Build results
     results = []
-    for tweet in tweets:
-        user = users.get(tweet["author_id"])
-        media_urls = [
-            media_map[m].get("url") or media_map[m].get("preview_image_url")
-            for m in tweet.get("attachments", {}).get("media_keys", []) if m in media_map
-        ]
+    for tweet in all_tweets:
+        try:
+            dt = date_parser.parse(tweet["created_at"])
+            if dt < cutoff:
+                continue
+        except Exception:
+            continue
+
+        user = users_by_id.get(tweet.get("author_id") or "")
+        media_urls = []
+        for key in tweet.get("attachments", {}).get("media_keys", []):
+            m = media_by_key.get(key)
+            if not m:
+                continue
+            if m.get("type") in ("photo", "animated_gif"):
+                url = m.get("url") or m.get("preview_image_url", "")
+                if url:
+                    if "pbs.twimg.com/media/" in url and "?format=" not in url:
+                        url = url + "?name=medium"
+                    media_urls.append(url)
+
         results.append({
-            "text": tweet["text"],
-            "username": user["username"] if user else "",
-            "name": user["name"] if user else "",
-            "profile_img": user.get("profile_image_url", "") if user else "",
-            "created_at": tweet["created_at"],
-            "likes": tweet["public_metrics"]["like_count"],
-            "retweets": tweet["public_metrics"]["retweet_count"],
-            "tweet_id": tweet["id"],
-            "media": media_urls
+            "text": tweet.get("text", ""),
+            "username": (user or {}).get("username", ""),
+            "name": (user or {}).get("name", ""),
+            "profile_img": (user or {}).get("profile_image_url", ""),
+            "created_at": tweet.get("created_at", ""),
+            "likes": tweet.get("public_metrics", {}).get("like_count", 0),
+            "retweets": tweet.get("public_metrics", {}).get("retweet_count", 0),
+            "tweet_id": tweet.get("id", ""),
+            "media": media_urls,
         })
 
-    # Sort locally
+    # Sort locally by requested metric
     if sort_by == "likes":
         results.sort(key=lambda x: x["likes"], reverse=True)
     elif sort_by == "retweets":
         results.sort(key=lambda x: x["retweets"], reverse=True)
-    else:  # published
+    else:
         results.sort(key=lambda x: x["created_at"], reverse=True)
 
     return results[:max_results]
