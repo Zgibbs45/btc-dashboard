@@ -488,7 +488,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         st.markdown(f'<div class="article-meta">{src} · {pub}</div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=1800)
-def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=15):
+def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="likes", max_results=15):
     """
     Fetch recent tweets then sort locally by engagement.
     Uses pagination so popular tweets older than the most recent 100 still appear.
