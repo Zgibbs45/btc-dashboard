@@ -491,15 +491,15 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=1, sort_by="likes", max_results=6):
     headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
     if query_scope == "CleanSpark":
-        query = '("CleanSpark" OR #CLSK OR CLSK) -is:retweet (has:links OR has:media OR has:images)'
+        query = '(("CleanSpark" OR #CLSK OR $CLSK OR CLSK) -is:retweet (has:links OR has:media OR has:images)) lang:en'
     else:
-        query = '(bitcoin OR BTC OR mining OR crypto) -is:retweet (has:links OR has:media OR has:images)'
+        query = '((bitcoin OR BTC OR $BTC OR #BTC OR mining OR crypto) -is:retweet (has:links OR has:media OR has:images)) lang:en'
 
     from_date = (datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     url = "https://api.twitter.com/2/tweets/search/recent"
     params = {
         "query": query,
-        "max_results": 50,
+        "max_results": 100,
         "tweet.fields": "public_metrics,created_at,author_id,entities",
         "start_time": from_date,
         "expansions": "attachments.media_keys,author_id",
@@ -1118,7 +1118,6 @@ if tab == "Bitcoin News":
         "Popularity": "popularity",
         "Published": "publishedAt",
     }
-    btc_metrics = get_coingecko_btc_data()
     btc = yf.Ticker("BTC-USD")
 
     st.subheader("📈 Bitcoin Market Stats")
@@ -1251,14 +1250,12 @@ if tab == "Bitcoin News":
         )
 
         points = alt.Chart(btc_close).mark_circle(size=40).encode(
-            x=alt.X("Date:T") if selected_range == "1d" else alt.X("Date_Day:T"),
+            x=x_axis,
             y="Price:Q",
             tooltip=[
-                alt.Tooltip(
-                    "Date:T" if selected_range == "1d" else "Date_Day:T",
-                    title=tooltip_title,
-                    format="%I:%M %p" if selected_range == "1d" else "%b %d",
-                ),
+                alt.Tooltip("Date:T" if selected_range == "1d" else "Date_Day:T",
+                            title=tooltip_title,
+                            format="%I:%M %p" if selected_range == "1d" else "%b %d"),
                 alt.Tooltip("Price:Q", format=".2f"),
             ],
         )
