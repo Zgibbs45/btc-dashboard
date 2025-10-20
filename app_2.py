@@ -1497,11 +1497,21 @@ if check_now:
         # ⬇️ Build once, render once (outside the loop)
         df = pd.DataFrame(rows)
 
-        def _tx_url(h):
-            return _EXPLORER_URL_TMPL.format(hash=h) if h and h != "—" else None
+        # Make the hash itself clickable (uses your fixed explorer template)
+        def _hash_as_link(h: str) -> str:
+            if not h or h == "—":
+                return "—"
+            url = _EXPLORER_URL_TMPL.format(hash=h)
+            return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
 
-        df["TX Link"] = df["Last Tx Hash"].apply(_tx_url)
+        df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
 
+        # Keep your column order
+        cols = ["Address", "Current Balance", "Total Received", "Total Sent", "Last Tx Time", "Last Tx Hash", "Status"]
+
+        # Single table, no duplicates; hash is clickable
+        st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
+        
         st.dataframe(
             df,
             use_container_width=True,
@@ -1509,8 +1519,6 @@ if check_now:
                 "TX Link": st.column_config.LinkColumn("TX Link", display_text="Open"),
             },
         )
-        
-        st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
 col1, col2 = st.columns([1.8,2.2])
 
