@@ -6,6 +6,7 @@ import base64
 import os
 import pytz
 import time
+import io
 import re
 import html
 import altair as alt
@@ -201,6 +202,12 @@ NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
 TWITTER_BEARER_TOKEN = st.secrets["TWITTER_BEARER_TOKEN"]
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COINGECKO_API_KEY = st.secrets["COINGECKO_API_KEY"]
+_BITQUERY_KEY = st.secrets.get("BITQUERY_API_KEY", None)
+
+_BITQUERY_URL = "https://graphql.bitquery.io"
+
+_ADDR_BECH32 = re.compile(r"^(bc1|tb1)[a-z0-9]{11,71}$")
+_ADDR_BASE58 = re.compile(r"^[123mn2][1-9A-HJ-NP-Za-km-z]{24,95}$")
 
 SEC_FACTS = {
     "Adjusted EBITDA": [],
@@ -987,7 +994,6 @@ def get_latest_edgar_inline_url(cik, accn=None):
 @st.cache_data(ttl=3600)
 def get_latest_press_release_metrics(company_name, ticker_symbol):
     import re
-    import requests
     from bs4 import BeautifulSoup
 
     ticker = ticker_symbol.upper()
@@ -1061,7 +1067,6 @@ def get_latest_press_release_metrics(company_name, ticker_symbol):
         "EH/s": r"([\d\.]+)\s*(?:EH/s|exahash|exahashes)"
     }
 
-    # Step 1: Extract EH/s first and redact the entire EH/s string from content
     ehs_matches = re.findall(r"(([\d\.]+)\s*(EH/s|exahash|exahashes))", content)
     if ehs_matches:
         values = []
@@ -1069,22 +1074,19 @@ def get_latest_press_release_metrics(company_name, ticker_symbol):
             try:
                 val = float(number.replace(",", ""))
                 values.append(val)
-                content = content.replace(full, "")  # redact full match like "50 EH/s"
+                content = content.replace(full, "")  
             except:
                 continue
         if values:
             metrics["EH/s"] = f"{max(values):.2f} EH/s"
 
-    # Step 2: Extract everything else
     for label, pattern in patterns.items():
         if label == "EH/s":
-            continue  # Already handled
+            continue  
 
         matches = re.findall(pattern, content)
         if not matches:
             continue
-
-        # Flatten based on type
         if isinstance(matches[0], tuple):
             numbers = [g for pair in matches for g in pair if g and g.strip().replace(',', '').replace('.', '').isdigit()]
         else:
@@ -1110,28 +1112,118 @@ def get_latest_press_release_metrics(company_name, ticker_symbol):
         "metrics": metrics
     }
 
+def _is_btc_address(s: str) -> bool:
+    s = (s or "").strip()
+    return bool(_ADDR_BECH32.match(s)) or bool(_ADDR_BASE58.match(s))
+
+def _dedupe_keep_order(items):
+    seen, out = set(), []
+    for x in items:
+        if x not in seen:
+            seen.add(x); out.append(x)
+    return out
+
+def _parse_addresses(text: str, csv_file):
+    found = []
+    if text:
+        parts = re.split(r"[\s,]+", text.strip())
+        found.extend([p.strip() for p in parts if p.strip()])
+    if csv_file is not None:
+        data = csv_file.read().decode("utf-8", errors="ignore")
+        csv_file.seek(0)
+        reader = csv.reader(io.StringIO(data))
+        rows = list(reader)
+        if rows:
+            header = [h.strip().lower() for h in rows[0]]
+            if "address" in header:
+                idx = header.index("address")
+                found.extend(r[idx].strip() for r in rows[1:] if len(r) > idx and r[idx].strip())
+            else:
+                found.extend(r[0].strip() for r in rows if r and r[0].strip())
+    addrs = [a for a in _dedupe_keep_order(found) if _is_btc_address(a)]
+    return addrs
+
+def get_address_snapshot_bitquery(address: str):
+    """
+    Minimal interface returning a snapshot dict.
+    If no API key is set, returns None values so the UI still works with no hard-coding.
+
+    Returns:
+      {
+        "address": str,
+        "current_balance_btc": float|None,
+        "total_received_btc": float|None,
+        "total_sent_btc": float|None,
+        "last_tx_time": str|None,   # ISO
+        "last_tx_hash": str|None,
+        "tx_count": int|None,
+      }
+    """
+    if not _BITQUERY_KEY:
+        return {
+            "address": address,
+            "current_balance_btc": None,
+            "total_received_btc": None,
+            "total_sent_btc": None,
+            "last_tx_time": None,
+            "last_tx_hash": None,
+            "tx_count": None,
+        }
+    try:
+        r = requests.post(
+            _BITQUERY_URL,
+            headers={"X-API-KEY": _BITQUERY_KEY},
+            json={"query": "query { ping }"},
+            timeout=15,
+        )
+        return {
+            "address": address,
+            "current_balance_btc": None,
+            "total_received_btc": None,
+            "total_sent_btc": None,
+            "last_tx_time": None,
+            "last_tx_hash": None,
+            "tx_count": None,
+        }
+    except Exception:
+        return {
+            "address": address,
+            "current_balance_btc": None,
+            "total_received_btc": None,
+            "total_sent_btc": None,
+            "last_tx_time": None,
+            "last_tx_hash": None,
+            "tx_count": None,
+        }
+
+#####################################
 # --- Tabs and Layout Config ---
 st.title("Legal & Market Dashboard")
 with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)  # spacing
 
     def image_to_base64(path):
-        with open(path, "rb") as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
+        try:
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+        except FileNotFoundError:
+            return None
 
     img_b64 = image_to_base64("cleanspark_logo.png")
-
-    st.markdown(
-        f"""
-        <div style="text-align: center;">
-            <a href="https://www.cleanspark.com" target="_blank" title="Visit CleanSpark">
-                <img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:400px; border-radius:10px; display:block; margin:auto;" />
-            </a>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    if img_b64:
+        st.markdown(
+            f"""
+            <div style="text-align: center;">
+                <a href="https://www.cleanspark.com" target="_blank" title="Visit CleanSpark">
+                    <img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:400px; border-radius:10px; display:block; margin:auto;" />
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown("**CleanSpark**", unsafe_allow_html=True)
+        
 tab = st.sidebar.selectbox("Select a page", ["Bitcoin News", "Live Market"])
 if tab == "Bitcoin News":
     
@@ -1296,6 +1388,62 @@ if tab == "Bitcoin News":
         )
 
         st.altair_chart(chart, use_container_width=True)
+
+st.markdown("### 🔎 BTC Address Tracker (beta)")
+st.caption("Paste multiple addresses (comma / space / newline) or upload a CSV with an 'address' column. Click **Check now** for a one-time lookup.")
+
+# Inputs
+c_inp1, c_inp2 = st.columns([2, 1])
+with c_inp1:
+    raw_addresses = st.text_area(
+        "BTC addresses",
+        value="",
+        height=88,
+        placeholder="e.g.\n1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa\n3Pja5FPK1wFB9LkWWJai8XYL1qjbqqT9Ye\nbc1qxyz...",
+        help="Multiple addresses allowed (comma, space, or newline separated).",
+        key="addr_tracker_text",
+    )
+with c_inp2:
+    csv_file = st.file_uploader(
+        "…or upload CSV",
+        type=["csv"],
+        help="Uses 'address' column if present; otherwise the first column.",
+        key="addr_tracker_csv",
+    )
+
+addresses = _parse_addresses(raw_addresses, csv_file)
+
+# Manual trigger
+c_btn1, c_btn2 = st.columns([1, 5])
+with c_btn1:
+    check_now = st.button("Check now", type="primary", use_container_width=True)
+
+# Config hint
+if not _BITQUERY_KEY:
+    st.info("Add your Bitquery API key to `st.secrets['BITQUERY_API_KEY']` to enable live lookups. No addresses are hard-coded.")
+
+# Execute lookup (no background polling)
+if check_now:
+    if not addresses:
+        st.warning("Enter at least one valid BTC address or upload a CSV.")
+    else:
+        rows = []
+        with st.spinner(f"Checking {len(addresses)} address(es)…"):
+            for addr in addresses:
+                snap = get_address_snapshot_bitquery(addr)
+                # MVP rule: any transactions (in or out) => 'Moved'
+                moved = (snap.get("tx_count") or 0) > 0
+                rows.append({
+                    "Address": snap["address"],
+                    "Current Balance": (f"{snap['current_balance_btc']:.8f} BTC" if snap.get("current_balance_btc") is not None else "—"),
+                    "Total Received": (f"{snap['total_received_btc']:.8f} BTC" if snap.get("total_received_btc") is not None else "—"),
+                    "Total Sent": (f"{snap['total_sent_btc']:.8f} BTC" if snap.get("total_sent_btc") is not None else "—"),
+                    "Last Tx Time": (format_timestamp(snap["last_tx_time"]) if snap.get("last_tx_time") else "—"),  # uses your existing PST formatter
+                    "Last Tx Hash": (snap["last_tx_hash"] or "—"),
+                    "Status": "Moved" if moved else "No change",
+                })
+
+        st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
     col1, col2 = st.columns([1.8,2.2])
 
@@ -1754,13 +1902,6 @@ if tab == "Live Market":
             )
             last_n = chart_df.groupby("Ticker")["_n"].transform("max")
             chart_df = chart_df[(chart_df["_n"] % 2 == 0) | (chart_df["_n"] == last_n)].drop(columns="_n")
-
-
-        # Format time for tooltip (PT)
-        if comp_selected_period == "1d":
-            chart_df["TimeET"] = chart_df["Date"].dt.strftime("%I:%M %p")
-        else:
-            chart_df["TimeET"] = chart_df["Date"].dt.strftime("%b %d")
 
         chart_df["Price"] = pd.to_numeric(chart_df["Price"], errors="coerce")
         chart_df.dropna(subset=["Price"], inplace=True)
