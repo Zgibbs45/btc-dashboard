@@ -1492,34 +1492,33 @@ if check_now:
         with st.spinner(f"Checking {len(addresses)} address(es)…"):
             for addr in addresses:
                 snap = get_address_snapshot_bitquery(addr)
-                # MVP rule: any transactions (in or out) => 'Moved'
                 moved = (snap.get("tx_count") or 0) > 0
                 rows.append({
                     "Address": snap["address"],
                     "Current Balance": (f"{snap['current_balance_btc']:.8f} BTC" if snap.get("current_balance_btc") is not None else "—"),
                     "Total Received": (f"{snap['total_received_btc']:.8f} BTC" if snap.get("total_received_btc") is not None else "—"),
                     "Total Sent": (f"{snap['total_sent_btc']:.8f} BTC" if snap.get("total_sent_btc") is not None else "—"),
-                    "Last Tx Time": (format_timestamp(snap["last_tx_time"]) if snap.get("last_tx_time") else "—"),  # uses your existing PST formatter
+                    "Last Tx Time": (format_timestamp(snap["last_tx_time"]) if snap.get("last_tx_time") else "—"),
                     "Last Tx Hash": (snap["last_tx_hash"] or "—"),
                     "Status": "Moved" if moved else "No change",
                 })
 
-                df = pd.DataFrame(rows)
+        # ⬇️ Build once, render once (outside the loop)
+        df = pd.DataFrame(rows)
 
-                # Build a URL from the selected explorer template
-                def _tx_url(h):
-                    return _TPL.format(hash=h) if h and h != "—" else None
+        # Explorer link builder
+        def _tx_url(h):
+            return _TPL.format(hash=h) if h and h != "—" else None
 
-                df["TX Link"] = df["Last Tx Hash"].apply(_tx_url)
+        df["TX Link"] = df["Last Tx Hash"].apply(_tx_url)
 
-                st.dataframe(
-                    df,
-                    use_container_width=True,
-                    column_config={
-                        # Renders a clickable link with label "Open"
-                        "TX Link": st.column_config.LinkColumn("TX Link", display_text="Open"),
-                    },
-                )
+        st.dataframe(
+            df,
+            use_container_width=True,
+            column_config={
+                "TX Link": st.column_config.LinkColumn("TX Link", display_text="Open"),
+            },
+        )
 
         st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
