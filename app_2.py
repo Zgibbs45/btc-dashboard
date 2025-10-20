@@ -1511,14 +1511,6 @@ if check_now:
 
         # Single table, no duplicates; hash is clickable
         st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
-        
-        st.dataframe(
-            df,
-            use_container_width=True,
-            column_config={
-                "TX Link": st.column_config.LinkColumn("TX Link", display_text="Open"),
-            },
-        )
 
 col1, col2 = st.columns([1.8,2.2])
 
