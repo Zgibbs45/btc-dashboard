@@ -1145,19 +1145,8 @@ def _parse_addresses(text: str, csv_file):
 
 def get_address_snapshot_bitquery(address: str):
     """
-    Minimal interface returning a snapshot dict.
-    If no API key is set, returns None values so the UI still works with no hard-coding.
-
-    Returns:
-      {
-        "address": str,
-        "current_balance_btc": float|None,
-        "total_received_btc": float|None,
-        "total_sent_btc": float|None,
-        "last_tx_time": str|None,   # ISO
-        "last_tx_hash": str|None,
-        "tx_count": int|None,
-      }
+    Query Bitquery for a BTC address snapshot.
+    Returns BTC-denominated totals and the most recent tx (time + hash).
     """
     if not _BITQUERY_KEY:
         return {
@@ -1169,23 +1158,83 @@ def get_address_snapshot_bitquery(address: str):
             "last_tx_hash": None,
             "tx_count": None,
         }
+
+    q = """
+    query ($addr: String!) {
+      bitcoin(network: bitcoin) {
+        inAgg: inputs(inputAddress: {is: $addr}) {
+          count
+          value
+          min_date: minimum(of: date)
+          max_date: maximum(of: date)
+        }
+        outAgg: outputs(outputAddress: {is: $addr}) {
+          count
+          value
+          min_date: minimum(of: date)
+          max_date: maximum(of: date)
+        }
+        lastIn: inputs(
+          inputAddress: {is: $addr}
+          options: {desc: ["block.timestamp.time"], limit: 1}
+        ) {
+          transaction { hash }
+          block { timestamp { time(format: "%Y-%m-%dT%H:%M:%SZ") } }
+        }
+        lastOut: outputs(
+          outputAddress: {is: $addr}
+          options: {desc: ["block.timestamp.time"], limit: 1}
+        ) {
+          transaction { hash }
+          block { timestamp { time(format: "%Y-%m-%dT%H:%M:%SZ") } }
+        }
+      }
+    }
+    """
     try:
         r = requests.post(
             _BITQUERY_URL,
             headers={"X-API-KEY": _BITQUERY_KEY},
-            json={"query": "query { ping }"},
-            timeout=15,
+            json={"query": q, "variables": {"addr": address}},
+            timeout=25,
         )
+        r.raise_for_status()
+        b = (r.json() or {}).get("data", {}).get("bitcoin", {}) or {}
+
+        inAgg  = (b.get("inAgg")  or [{}])[0]
+        outAgg = (b.get("outAgg") or [{}])[0]
+
+        total_in  = float(inAgg.get("value") or 0.0)   # BTC sent (inputs)
+        total_out = float(outAgg.get("value") or 0.0)  # BTC received (outputs)
+        balance   = total_out - total_in
+
+        # Latest tx from either side
+        def _pick(ts_list):
+            if not ts_list: return None, None
+            item = ts_list[0]
+            ts   = (((item.get("block") or {}).get("timestamp") or {}).get("time"))
+            h    = ((item.get("transaction") or {}).get("hash"))
+            return ts, h
+
+        in_ts,  in_hash  = _pick(b.get("lastIn")  or [])
+        out_ts, out_hash = _pick(b.get("lastOut") or [])
+
+        last_ts   = max([t for t in [in_ts, out_ts] if t], default=None)
+        last_hash = in_hash if last_ts and in_ts == last_ts else (out_hash if last_ts else None)
+
+        tx_count = int((inAgg.get("count") or 0) + (outAgg.get("count") or 0))
+
         return {
             "address": address,
-            "current_balance_btc": None,
-            "total_received_btc": None,
-            "total_sent_btc": None,
-            "last_tx_time": None,
-            "last_tx_hash": None,
-            "tx_count": None,
+            "current_balance_btc": balance,
+            "total_received_btc": total_out,
+            "total_sent_btc": total_in,
+            "last_tx_time": last_ts,
+            "last_tx_hash": last_hash,
+            "tx_count": tx_count,
         }
-    except Exception:
+    except Exception as e:
+        print("Bitquery error:", e, getattr(r, "text", "")[:400])
         return {
             "address": address,
             "current_balance_btc": None,
