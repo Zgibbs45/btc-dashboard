@@ -203,10 +203,10 @@ TWITTER_BEARER_TOKEN = st.secrets["TWITTER_BEARER_TOKEN"]
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COINGECKO_API_KEY = st.secrets["COINGECKO_API_KEY"]
 _BITQUERY_KEY = st.secrets.get("BITQUERY_API_KEY", None)
-_EXPLORER_URL_TMPL = st.secrets.get(
-    "EXPLORER_URL_TMPL",
-    "https://mempool.space/tx/{hash}"  # default
-)
+_EXPLORER_URL_TMPL = st.secrets.get("EXPLORER_URL_TMPL", "https://mempool.space/tx/{hash}")
+_EXPLORER_TX_TMPL   = st.secrets.get("EXPLORER_TX_TMPL",   "https://mempool.space/tx/{hash}")
+_EXPLORER_ADDR_TMPL = st.secrets.get("EXPLORER_ADDR_TMPL", "https://mempool.space/address/{address}")
+
 _BITQUERY_URL = "https://graphql.bitquery.io"
 
 _ADDR_BECH32 = re.compile(r"^(bc1|tb1)[a-z0-9]{11,71}$")
@@ -1248,6 +1248,18 @@ def get_address_snapshot_bitquery(address: str):
             "tx_count": None,
         }
 
+def _hash_as_link(h: str) -> str:
+    if not h or h == "—":
+        return "—"
+    url = _EXPLORER_TX_TMPL.format(hash=h)
+    return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
+
+def _addr_as_link(a: str) -> str:
+    if not a or a == "—":
+        return "—"
+    url = _EXPLORER_ADDR_TMPL.format(address=a)
+    return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(a)}</a>'
+
 #####################################
 # --- Tabs and Layout Config ---
 st.title("Legal & Market Dashboard")
@@ -1504,12 +1516,12 @@ if check_now:
             url = _EXPLORER_URL_TMPL.format(hash=h)
             return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
 
+        df["Address"]      = df["Address"].apply(_addr_as_link)
         df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
 
-        # Keep your column order
         cols = ["Address", "Current Balance", "Total Received", "Total Sent", "Last Tx Time", "Last Tx Hash", "Status"]
 
-        # Single table, no duplicates; hash is clickable
+        # ONE table only; hash and address are clickable
         st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
 
 col1, col2 = st.columns([1.8,2.2])
