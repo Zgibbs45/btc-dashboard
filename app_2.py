@@ -203,7 +203,10 @@ TWITTER_BEARER_TOKEN = st.secrets["TWITTER_BEARER_TOKEN"]
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 COINGECKO_API_KEY = st.secrets["COINGECKO_API_KEY"]
 _BITQUERY_KEY = st.secrets.get("BITQUERY_API_KEY", None)
-
+_EXPLORER_URL_TMPL = st.secrets.get(
+    "EXPLORER_URL_TMPL",
+    "https://mempool.space/tx/{hash}"  # default
+)
 _BITQUERY_URL = "https://graphql.bitquery.io"
 
 _ADDR_BECH32 = re.compile(r"^(bc1|tb1)[a-z0-9]{11,71}$")
@@ -1471,18 +1474,6 @@ with c_btn1:
 if not _BITQUERY_KEY:
     st.info("Add your Bitquery API key to `st.secrets['BITQUERY_API_KEY']` to enable live lookups. No addresses are hard-coded.")
 
-explorer = st.selectbox(
-    "Explorer for links",
-    ["mempool.space", "Blockstream.info", "Blockchain.com"],
-    index=0,
-    help="Controls where the TX Hash link opens."
-)
-_TPL = {
-    "mempool.space":   "https://mempool.space/tx/{hash}",
-    "Blockstream.info":"https://blockstream.info/tx/{hash}",
-    "Blockchain.com":  "https://www.blockchain.com/btc/tx/{hash}",
-}[explorer]
-
 # Execute lookup (no background polling)
 if check_now:
     if not addresses:
@@ -1506,9 +1497,8 @@ if check_now:
         # ⬇️ Build once, render once (outside the loop)
         df = pd.DataFrame(rows)
 
-        # Explorer link builder
         def _tx_url(h):
-            return _TPL.format(hash=h) if h and h != "—" else None
+            return _EXPLORER_URL_TMPL.format(hash=h) if h and h != "—" else None
 
         df["TX Link"] = df["Last Tx Hash"].apply(_tx_url)
 
@@ -1519,7 +1509,7 @@ if check_now:
                 "TX Link": st.column_config.LinkColumn("TX Link", display_text="Open"),
             },
         )
-
+        
         st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
 col1, col2 = st.columns([1.8,2.2])
