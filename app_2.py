@@ -508,9 +508,9 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
     # Avoid cashtag operator ($CLSK) – not available on some tiers.
     # Plain CLSK matches $CLSK tokens in text.
     if query_scope == "CleanSpark":
-        query = '(("CleanSpark" OR #CLSK OR CLSK) -is:retweet (has:links OR has:media OR has:images)) lang:en'
+        query = '(("CleanSpark" OR #CLSK OR CLSK) -is:retweet) lang:en'
     else:
-        query = '((bitcoin OR BTC OR #BTC OR mining OR crypto) -is:retweet (has:links OR has:media OR has:images)) lang:en'
+        query = '((bitcoin OR BTC OR #BTC OR mining OR crypto) -is:retweet) lang:en'
 
     cutoff = datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)
     url = "https://api.twitter.com/2/tweets/search/recent"
@@ -538,7 +538,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
 
         response = requests.get(url, headers=headers, params=params, timeout=15)
         if response.status_code != 200:
-            # Return whatever we've collected so far rather than hard fail
+            st.warning(f"Twitter API error {response.status_code}: {response.text[:200]}")
             break
 
         payload = response.json()
@@ -1532,8 +1532,8 @@ with col1:
     tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default="CleanSpark Only", key="tw_scope")
     tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default="Likes", key="tw_sort")
     tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
-    tw_max_days = 1  # fixed 24-hour window
-
+    tw_max_days = 2 
+    
     tweets = get_cleanspark_tweets(
         query_scope=tw_scope_val,
         max_age_days=tw_max_days,        
