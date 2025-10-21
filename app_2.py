@@ -517,7 +517,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
 
     base_params = {
         "query": query,
-        "max_results": 100,  # full page
+        "max_results": min(max_results, 100),
         "tweet.fields": "public_metrics,created_at,author_id,entities,lang",
         "start_time": cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "expansions": "attachments.media_keys,author_id",
@@ -557,8 +557,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
         meta = payload.get("meta", {}) or {}
         next_token = meta.get("next_token")
 
-        # stop if no more pages, enough pages, or oldest tweet on this page is beyond cutoff
-        if not next_token or pages >= 5:
+        if len(all_tweets) >= max_results:
             break
         try:
             oldest = min((date_parser.parse(t["created_at"]) for t in page_tweets), default=None)
