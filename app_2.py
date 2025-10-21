@@ -1452,179 +1452,179 @@ if tab == "Bitcoin News":
 
         st.altair_chart(chart, use_container_width=True)
 
-st.markdown("### 🔎 BTC Address Tracker (beta)")
-st.caption("Paste multiple addresses (comma / space / newline) or upload a CSV with an 'address' column. Click **Check now** for a one-time lookup.")
+    st.markdown("### 🔎 BTC Address Tracker (beta)")
+    st.caption("Paste multiple addresses (comma / space / newline) or upload a CSV with an 'address' column. Click **Check now** for a one-time lookup.")
 
-# Inputs
-c_inp1, c_inp2 = st.columns([2, 1])
-with c_inp1:
-    raw_addresses = st.text_area(
-        "BTC addresses",
-        value="",
-        height=88,
-        placeholder="e.g.\n1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa\n3Pja5FPK1wFB9LkWWJai8XYL1qjbqqT9Ye\nbc1qxyz...",
-        help="Multiple addresses allowed (comma, space, or newline separated).",
-        key="addr_tracker_text",
-    )
-with c_inp2:
-    csv_file = st.file_uploader(
-        "…or upload CSV",
-        type=["csv"],
-        help="Uses 'address' column if present; otherwise the first column.",
-        key="addr_tracker_csv",
-    )
+    # Inputs
+    c_inp1, c_inp2 = st.columns([2, 1])
+    with c_inp1:
+        raw_addresses = st.text_area(
+            "BTC addresses",
+            value="",
+            height=88,
+            placeholder="e.g.\n1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa\n3Pja5FPK1wFB9LkWWJai8XYL1qjbqqT9Ye\nbc1qxyz...",
+            help="Multiple addresses allowed (comma, space, or newline separated).",
+            key="addr_tracker_text",
+        )
+    with c_inp2:
+        csv_file = st.file_uploader(
+            "…or upload CSV",
+            type=["csv"],
+            help="Uses 'address' column if present; otherwise the first column.",
+            key="addr_tracker_csv",
+        )
 
-addresses = _parse_addresses(raw_addresses, csv_file)
+    addresses = _parse_addresses(raw_addresses, csv_file)
 
-# Manual trigger
-c_btn1, c_btn2 = st.columns([1, 5])
-with c_btn1:
-    check_now = st.button("Check now", type="primary", use_container_width=True)
+    # Manual trigger
+    c_btn1, c_btn2 = st.columns([1, 5])
+    with c_btn1:
+        check_now = st.button("Check now", type="primary", use_container_width=True)
 
-# Config hint
-if not _BITQUERY_KEY:
-    st.info("Add your Bitquery API key to `st.secrets['BITQUERY_API_KEY']` to enable live lookups. No addresses are hard-coded.")
+    # Config hint
+    if not _BITQUERY_KEY:
+        st.info("Add your Bitquery API key to `st.secrets['BITQUERY_API_KEY']` to enable live lookups. No addresses are hard-coded.")
 
-# Execute lookup (no background polling)
-if check_now:
-    if not addresses:
-        st.warning("Enter at least one valid BTC address or upload a CSV.")
-    else:
-        rows = []
-        with st.spinner(f"Checking {len(addresses)} address(es)…"):
-            for addr in addresses:
-                snap = get_address_snapshot_bitquery(addr)
-                moved = (snap.get("tx_count") or 0) > 0
-                rows.append({
-                    "Address": snap["address"],
-                    "Current Balance": (f"{snap['current_balance_btc']:.8f} BTC" if snap.get("current_balance_btc") is not None else "—"),
-                    "Total Received": (f"{snap['total_received_btc']:.8f} BTC" if snap.get("total_received_btc") is not None else "—"),
-                    "Total Sent": (f"{snap['total_sent_btc']:.8f} BTC" if snap.get("total_sent_btc") is not None else "—"),
-                    "Last Tx Time": (format_timestamp(snap["last_tx_time"]) if snap.get("last_tx_time") else "—"),
-                    "Last Tx Hash": (snap["last_tx_hash"] or "—"),
-                    "Status": "Moved" if moved else "No change",
-                })
+    # Execute lookup (no background polling)
+    if check_now:
+        if not addresses:
+            st.warning("Enter at least one valid BTC address or upload a CSV.")
+        else:
+            rows = []
+            with st.spinner(f"Checking {len(addresses)} address(es)…"):
+                for addr in addresses:
+                    snap = get_address_snapshot_bitquery(addr)
+                    moved = (snap.get("tx_count") or 0) > 0
+                    rows.append({
+                        "Address": snap["address"],
+                        "Current Balance": (f"{snap['current_balance_btc']:.8f} BTC" if snap.get("current_balance_btc") is not None else "—"),
+                        "Total Received": (f"{snap['total_received_btc']:.8f} BTC" if snap.get("total_received_btc") is not None else "—"),
+                        "Total Sent": (f"{snap['total_sent_btc']:.8f} BTC" if snap.get("total_sent_btc") is not None else "—"),
+                        "Last Tx Time": (format_timestamp(snap["last_tx_time"]) if snap.get("last_tx_time") else "—"),
+                        "Last Tx Hash": (snap["last_tx_hash"] or "—"),
+                        "Status": "Moved" if moved else "No change",
+                    })
 
-        # ⬇️ Build once, render once (outside the loop)
-        df = pd.DataFrame(rows)
+            # ⬇️ Build once, render once (outside the loop)
+            df = pd.DataFrame(rows)
 
-        # Make the hash itself clickable (uses your fixed explorer template)
-        def _hash_as_link(h: str) -> str:
-            if not h or h == "—":
-                return "—"
-            url = _EXPLORER_URL_TMPL.format(hash=h)
-            return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
+            # Make the hash itself clickable (uses your fixed explorer template)
+            def _hash_as_link(h: str) -> str:
+                if not h or h == "—":
+                    return "—"
+                url = _EXPLORER_URL_TMPL.format(hash=h)
+                return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
 
-        df["Address"]      = df["Address"].apply(_addr_as_link)
-        df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
+            df["Address"]      = df["Address"].apply(_addr_as_link)
+            df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
 
-        cols = ["Address", "Current Balance", "Total Received", "Total Sent", "Last Tx Time", "Last Tx Hash", "Status"]
+            cols = ["Address", "Current Balance", "Total Received", "Total Sent", "Last Tx Time", "Last Tx Hash", "Status"]
 
-        # ONE table only; hash and address are clickable
-        st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
+            # ONE table only; hash and address are clickable
+            st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
 
-col1, col2 = st.columns([1.8,2.2])
+    col1, col2 = st.columns([1.8,2.2])
 
-with col1:
-    header_slot = st.container()
+    with col1:
+        header_slot = st.container()
 
-    tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default="CleanSpark Only", key="tw_scope")
-    tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default="Likes", key="tw_sort")
-    tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
-    tw_max_days = 2 
-    
-    tweets = get_cleanspark_tweets(
-        query_scope=tw_scope_val,
-        max_age_days=tw_max_days,        
-        sort_by=tw_sort.lower(),         
-        max_results=15
-    )
+        tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default="CleanSpark Only", key="tw_scope")
+        tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default="Likes", key="tw_sort")
+        tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
+        tw_max_days = 2 
+        
+        tweets = get_cleanspark_tweets(
+            query_scope=tw_scope_val,
+            max_age_days=tw_max_days,        
+            sort_by=tw_sort.lower(),         
+            max_results=15
+        )
 
-    with header_slot:
-        header, pill = st.columns([1, 0.18])
-        with header:
-            st.subheader("🐦 Twitter Feed (last 24 hours)")
-        with pill:
-            render_section_report_pill(
-                section_key="tweets",
-                items=tweets,            
-                kind="tweet",
-                page="Bitcoin News"
-            )
+        with header_slot:
+            header, pill = st.columns([1, 0.18])
+            with header:
+                st.subheader("🐦 Twitter Feed (last 24 hours)")
+            with pill:
+                render_section_report_pill(
+                    section_key="tweets",
+                    items=tweets,            
+                    kind="tweet",
+                    page="Bitcoin News"
+                )
 
-    for tweet in tweets:
-        translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
-        clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
-        final_text = html.escape(clean_text).replace("\n", "<br>")
+        for tweet in tweets:
+            translated_text = translate_text(tweet["text"], GOOGLE_API_KEY)
+            clean_text = re.sub(r'https://t\.co/\S+$', '', translated_text).strip()
+            final_text = html.escape(clean_text).replace("\n", "<br>")
 
-        with st.container():
-            st.markdown(f"""
-            <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
-                <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
-                <div style="flex:1 1 auto;">
-                    <div style="font-weight:600;">{tweet['name']}</div>
-                    <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
-                    <div style="margin-top:6px; font-size:15px; line-height:1.5; overflow-wrap:anywhere; word-break:break-word; hyphens:auto;">{final_text}</div>
-                    <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
-                    <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
+            with st.container():
+                st.markdown(f"""
+                <div class="tweet-block" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:1rem;">
+                    <img src="{tweet['profile_img']}" style="width:48px; height:48px; border-radius:50%; flex:0 0 auto;">
+                    <div style="flex:1 1 auto;">
+                        <div style="font-weight:600;">{tweet['name']}</div>
+                        <div style="color:gray; font-size:13px;">@{tweet['username']} • {format_timestamp(tweet['created_at'])}</div>
+                        <div style="margin-top:6px; font-size:15px; line-height:1.5; overflow-wrap:anywhere; word-break:break-word; hyphens:auto;">{final_text}</div>
+                        <div style="color:gray; font-size:13px; margin-top:6px;">🔁 {tweet['retweets']} &nbsp;&nbsp;&nbsp; ❤️ {tweet['likes']}</div>
+                        <div style="margin-top:6px;"><a href="https://x.com/i/web/status/{tweet['tweet_id']}" target="_blank" style="color:#1DA1F2; font-size:13px;">View on Twitter</a></div>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-        # Render media grid (kept compact)
-        render_tweet_media(tweet["media"])
-        st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
+            # Render media grid (kept compact)
+            render_tweet_media(tweet["media"])
+            st.markdown("<hr style='margin: 1rem 0; border: 2px solid #ddd;'>", unsafe_allow_html=True)
 
-                            
-# General News
-with col2:
-    header_slot = st.container()
-    scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
-    gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="news_scope_filter")
+                                
+    # General News
+    with col2:
+        header_slot = st.container()
+        scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
+        gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="news_scope_filter")
 
-    gen_col1, gen_col2 = st.columns([1, 1])
-    with gen_col1:
-        gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="news_days_filter")
-    with gen_col2:
-        gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="news_sort_filter")
+        gen_col1, gen_col2 = st.columns([1, 1])
+        with gen_col1:
+            gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="news_days_filter")
+        with gen_col2:
+            gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="news_sort_filter")
 
-    if gen_scope == "CleanSpark Only":
-        query_term = "CleanSpark"
-        exclude_term = None
-        filter_func = None
-    elif gen_scope == "Regulatory Only":
-        query_term = "GENIUS Act OR cryptocurrency legislation OR crypto bill OR digital asset policy"
-        exclude_term = None
-        filter_func = regulatory_article_filter
-    else:  
-        query_term = "bitcoin mining"
-        exclude_term = "CleanSpark"
-        filter_func = None
+        if gen_scope == "CleanSpark Only":
+            query_term = "CleanSpark"
+            exclude_term = None
+            filter_func = None
+        elif gen_scope == "Regulatory Only":
+            query_term = "GENIUS Act OR cryptocurrency legislation OR crypto bill OR digital asset policy"
+            exclude_term = None
+            filter_func = regulatory_article_filter
+        else:  
+            query_term = "bitcoin mining"
+            exclude_term = "CleanSpark"
+            filter_func = None
 
-    gen_from_days = day_options[gen_days]
-    gen_sort_by   = sort_by_map[gen_sort]
+        gen_from_days = day_options[gen_days]
+        gen_sort_by   = sort_by_map[gen_sort]
 
-    load_articles(
-        key="gen_articles",
-        query=query_term,
-        exclude=exclude_term,
-        from_days=gen_from_days,
-        sort_by=gen_sort_by,
-        filter_func=filter_func,
-        pill_at="title"
-    )
+        load_articles(
+            key="gen_articles",
+            query=query_term,
+            exclude=exclude_term,
+            from_days=gen_from_days,
+            sort_by=gen_sort_by,
+            filter_func=filter_func,
+            pill_at="title"
+        )
 
-    with header_slot:
-        header, pill = st.columns([1, 0.18])
-        with header:
-            st.subheader("📰 Bitcoin News")
-        with pill:
-            render_section_report_pill(
-                section_key="news",
-                items=st.session_state.get("gen_articles", []),
-                kind="article",
-                page="Bitcoin News"
-            )
+        with header_slot:
+            header, pill = st.columns([1, 0.18])
+            with header:
+                st.subheader("📰 Bitcoin News")
+            with pill:
+                render_section_report_pill(
+                    section_key="news",
+                    items=st.session_state.get("gen_articles", []),
+                    kind="article",
+                    page="Bitcoin News"
+                )
                 
 # --- HOME TAB ---
 if tab == "Live Market":
