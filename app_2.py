@@ -1506,42 +1506,37 @@ if tab == "Bitcoin News":
                     })
 
             # ⬇️ Build once, render once (outside the loop)
-            df_raw = pd.DataFrame(rows)
+            df = pd.DataFrame(rows)
 
-            # --- Sorting controls (server-side) ---
-            sort_options = ["Last Tx Time", "Current Balance", "Total Received", "Total Sent", "Address", "Status"]
-            c_sort1, c_sort2 = st.columns([2,1])
-            with c_sort1:
-                sort_by = st.selectbox("Sort by", sort_options, index=0)  # default: Last Tx Time
-            with c_sort2:
-                sort_dir = st.radio("Order", ["Descending", "Ascending"], horizontal=True)
-
-            # Normalize numeric/time columns for proper sorting
-            df_raw["_sort_time"] = pd.to_datetime(df_raw["Last Tx Time"], errors="coerce")
-            for c in ["Current Balance", "Total Received", "Total Sent"]:
-                df_raw[c+" (num)"] = (
-                    df_raw[c].str.replace(" BTC","", regex=False).replace("—", None).astype(float)
-                    if c in df_raw.columns else None
-                )
-
-            key = {
-                "Last Tx Time": "_sort_time",
-                "Current Balance": "Current Balance (num)",
-                "Total Received": "Total Received (num)",
-                "Total Sent": "Total Sent (num)",
-            }.get(sort_by, sort_by)
-
-            df_sorted = df_raw.sort_values(
-                by=key, ascending=(sort_dir=="Ascending"), na_position="last"
+            # Add link columns (keep the text columns for sorting)
+            df["↗ Address"] = df["Address"].apply(
+                lambda a: _EXPLORER_ADDR_TMPL.format(address=a) if a and a != "—" else None
+            )
+            df["↗ Tx"] = df["Last Tx Hash"].apply(
+                lambda h: _EXPLORER_TX_TMPL.format(hash=h) if h and h != "—" else None
             )
 
-            # Apply link formatting AFTER sorting
-            df = df_sorted.copy()
-            df["Address"]      = df["Address"].apply(_addr_as_link)
-            df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
+            # Choose your columns (drop "Status" here if you don’t want it)
+            cols = [
+                "Address",        # sortable by clicking header
+                "↗ Address",      # clickable "Open" link
+                "Current Balance",
+                "Total Received",
+                "Total Sent",
+                "Last Tx Time",
+                "Last Tx Hash",   # sortable by clicking header
+                "↗ Tx",           # clickable "Open" link
+                "Status",         # <-- remove from list to hide
+            ]
 
-            cols = ["Address","Current Balance","Total Received","Total Sent","Last Tx Time","Last Tx Hash","Status"]
-            st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
+            st.dataframe(
+                df[cols],
+                use_container_width=True,
+                column_config={
+                    "↗ Address": st.column_config.LinkColumn("↗ Address", display_text="Open"),
+                    "↗ Tx":      st.column_config.LinkColumn("↗ Tx",      display_text="Open"),
+                },
+            )
 
             # Make the hash itself clickable (uses your fixed explorer template)
             def _hash_as_link(h: str) -> str:
