@@ -1506,7 +1506,42 @@ if tab == "Bitcoin News":
                     })
 
             # ⬇️ Build once, render once (outside the loop)
-            df = pd.DataFrame(rows)
+            df_raw = pd.DataFrame(rows)
+
+            # --- Sorting controls (server-side) ---
+            sort_options = ["Last Tx Time", "Current Balance", "Total Received", "Total Sent", "Address", "Status"]
+            c_sort1, c_sort2 = st.columns([2,1])
+            with c_sort1:
+                sort_by = st.selectbox("Sort by", sort_options, index=0)  # default: Last Tx Time
+            with c_sort2:
+                sort_dir = st.radio("Order", ["Descending", "Ascending"], horizontal=True)
+
+            # Normalize numeric/time columns for proper sorting
+            df_raw["_sort_time"] = pd.to_datetime(df_raw["Last Tx Time"], errors="coerce")
+            for c in ["Current Balance", "Total Received", "Total Sent"]:
+                df_raw[c+" (num)"] = (
+                    df_raw[c].str.replace(" BTC","", regex=False).replace("—", None).astype(float)
+                    if c in df_raw.columns else None
+                )
+
+            key = {
+                "Last Tx Time": "_sort_time",
+                "Current Balance": "Current Balance (num)",
+                "Total Received": "Total Received (num)",
+                "Total Sent": "Total Sent (num)",
+            }.get(sort_by, sort_by)
+
+            df_sorted = df_raw.sort_values(
+                by=key, ascending=(sort_dir=="Ascending"), na_position="last"
+            )
+
+            # Apply link formatting AFTER sorting
+            df = df_sorted.copy()
+            df["Address"]      = df["Address"].apply(_addr_as_link)
+            df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
+
+            cols = ["Address","Current Balance","Total Received","Total Sent","Last Tx Time","Last Tx Hash","Status"]
+            st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
 
             # Make the hash itself clickable (uses your fixed explorer template)
             def _hash_as_link(h: str) -> str:
