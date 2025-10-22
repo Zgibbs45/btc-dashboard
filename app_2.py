@@ -1550,9 +1550,6 @@ if tab == "Bitcoin News":
 
             cols = ["Address", "Current Balance", "Total Received", "Total Sent", "Last Tx Time", "Last Tx Hash", "Status"]
 
-            # ONE table only; hash and address are clickable
-            st.markdown(df[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
-
     col1, col2 = st.columns([1.8,2.2])
 
     with col1:
