@@ -1283,7 +1283,7 @@ def get_address_snapshot_bitquery(address: str):
 def _hash_as_link(h: str) -> str:
     if not h or h == "—":
         return "—"
-    url = _EXPLORER_TX_TMPL.format(hash=h)
+    url = _EXPLORER_URL_TMPL.format(hash=h)
     return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
 
 def _addr_as_link(a: str) -> str:
@@ -1592,13 +1592,6 @@ if tab == "Bitcoin News":
                 },
             )
 
-            # Make the hash itself clickable (uses your fixed explorer template)
-            def _hash_as_link(h: str) -> str:
-                if not h or h == "—":
-                    return "—"
-                url = _EXPLORER_URL_TMPL.format(hash=h)
-                return f'<a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(h)}</a>'
-
             df["Address"]      = df["Address"].apply(_addr_as_link)
             df["Last Tx Hash"] = df["Last Tx Hash"].apply(_hash_as_link)
 
@@ -1821,9 +1814,6 @@ if tab == "Live Market":
         
         if lookup_range == "1 Day":
             pass
-            
-        # Limit to 5 most recent valid market days (skip holidays/weekends)
-        if lookup_range == "5 Days":
             df = df.dropna(subset=["Close"])
             df["DateOnly"] = df.index.date
             recent_days = sorted(df["DateOnly"].unique())[-5:]  # Get last 5 trading days
