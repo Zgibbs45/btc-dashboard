@@ -1762,21 +1762,6 @@ if tab == "Live Market":
                 <div style='font-size:24px; font-weight:bold;'>${value:.2f}</div>
                 {delta_html}
             """
-        with m1:
-            st.markdown(render_metric_block("Current Price", price, delta=change_amount, reference=prev_close, show_arrow=True), unsafe_allow_html=True)
-
-        with m2:
-            st.markdown(render_metric_block("CLSK Price", clsk_price), unsafe_allow_html=True)
-
-        with m3:
-            st.markdown(render_metric_block("CLSK Open", clsk_open), unsafe_allow_html=True)
-
-        with m4:
-            st.markdown(render_metric_block("CLSK High", clsk_high), unsafe_allow_html=True)
-
-        with m5:
-            st.markdown(render_metric_block("CLSK Low", clsk_low), unsafe_allow_html=True)
-        
         interval = "5m" if selected_range == "1d" else "1d"
         with st.spinner(f"Loading {sym} price…"):
             df = history_cached(sym, period=extended_range, interval=interval)
@@ -1790,6 +1775,41 @@ if tab == "Live Market":
             df["DateOnly"] = df.index.date
             recent_days = sorted(df["DateOnly"].unique())[-5:]  # Get last 5 trading days
             df = df[df["DateOnly"].isin(recent_days)]
+        
+        window_ref = window_last = window_delta = None
+        try:
+            df_close = df["Close"].dropna()
+            if not df_close.empty:
+                window_ref = float(df_close.iloc[0])     # first price in window
+                window_last = float(df_close.iloc[-1])   # last price in window
+                window_delta = window_last - window_ref
+        except Exception:
+            pass
+
+        with m1:
+            st.markdown(
+                render_metric_block(
+                    "Current Price",
+                    # prefer live quote; fall back to last close if needed
+                    price if price is not None else (window_last if window_last is not None else None),
+                    delta=window_delta,
+                    reference=window_ref,
+                    show_arrow=True
+                ),
+                unsafe_allow_html=True
+            )
+
+        with m2:
+            st.markdown(render_metric_block("CLSK Price", clsk_price), unsafe_allow_html=True)
+
+        with m3:
+            st.markdown(render_metric_block("CLSK Open", clsk_open), unsafe_allow_html=True)
+
+        with m4:
+            st.markdown(render_metric_block("CLSK High", clsk_high), unsafe_allow_html=True)
+
+        with m5:
+            st.markdown(render_metric_block("CLSK Low", clsk_low), unsafe_allow_html=True)
         
         if "regularMarketPrice" not in info or df.empty:
             st.warning(f"No data available for ticker `{sym}`.")
