@@ -1345,7 +1345,7 @@ if tab == "Bitcoin News":
 
     st.subheader("📈 Bitcoin Market Stats")
     btc_range_options = range_options  # show 1 Day / 1 Week / 1 Month / 6 Months / 1 Year
-    sel = st.pills("Bitcoin price range:", options=list(btc_range_options.keys()), default=st.session_state["btc_range"], key="btc_range")
+    sel = st.pills("Timeframe:", options=list(btc_range_options.keys()), default=st.session_state["btc_range"], key="btc_range")
     selected_range = btc_range_options.get(sel, "1mo")
     with st.spinner("Loading BTC price…"):
         data = get_history(btc, selected_range)
@@ -1657,7 +1657,7 @@ if tab == "Bitcoin News":
         gen_scope = st.pills("Article Scope:", scope_options, default=st.session_state["news_scope_filter"], key="news_scope_filter")
         gen_col1, gen_col2 = st.columns([1, 1])
         with gen_col1:
-            gen_days = st.pills("Articles from the past.", list(day_options.keys()), default=st.session_state["news_days_filter"], key="news_days_filter")
+            gen_days = st.pills("Articles from the past:", list(day_options.keys()), default=st.session_state["news_days_filter"], key="news_days_filter")
         with gen_col2:
             gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default=st.session_state["news_sort_filter"], key="news_sort_filter")
 
@@ -1718,12 +1718,7 @@ if tab == "Live Market":
         st.subheader(f"📊 Stock Market Lookup: {company_name}")        
         m1, m2 = st.columns([1.5, 2.5])
         with m1:
-            raw = st.text_input(
-                "Stock ticker:",
-                value=st.session_state["stock_lookup_ticker"],
-                key="stock_lookup_ticker",
-                placeholder="e.g. CLSK"
-            )
+            raw = st.text_input("Stock ticker:", key="stock_lookup_ticker", placeholder="e.g. CLSK")
             sym = (raw or "").strip().upper()
             cik = cik_map.get(sym) if sym else None
             entered_ticker = sym or ""
@@ -1811,13 +1806,6 @@ if tab == "Live Market":
         interval = "5m" if selected_range == "1d" else "1d"
         with st.spinner(f"Loading {sym} price…"):
             df = history_cached(sym, period=extended_range, interval=interval)
-        
-        if lookup_range == "1 Day":
-            pass
-            df = df.dropna(subset=["Close"])
-            df["DateOnly"] = df.index.date
-            recent_days = sorted(df["DateOnly"].unique())[-5:]  # Get last 5 trading days
-            df = df[df["DateOnly"].isin(recent_days)]
         
         window_ref = window_last = window_delta = None
         try:
