@@ -21,6 +21,23 @@ from urllib.parse import quote
 #STYLES
 st.set_page_config(layout="wide")
 
+DEFAULTS = {
+    "tab": "Live Market",
+    "stock_lookup_ticker": "CLSK",
+    "lookup_range": "1 Day",
+    "btc_range": "1 Day",
+    "comp_chart_range": "1 Day",
+    "comp_chart_tickers": ["CLSK", "MARA"],
+    "news_scope_filter": "All Bitcoin",
+    "news_days_filter": "1 Day",
+    "news_sort_filter": "Popularity",
+    "tw_scope": "CleanSpark Only",
+    "tw_sort": "Likes",
+    "quarter_selector": "Current Metrics",
+}
+for k, v in DEFAULTS.items():
+    st.session_state.setdefault(k, v)
+
 st.markdown("""
 <style>
 .article-title { margin: 0; font-weight: 600; font-size: 16px; line-height: 1.35; }
@@ -1303,7 +1320,13 @@ with st.sidebar:
     else:
         st.markdown("**CleanSpark**", unsafe_allow_html=True)
         
-tab = st.sidebar.selectbox("Select a page", ["Bitcoin News", "Live Market"])
+tab_options = ["Bitcoin News", "Live Market"]
+tab = st.sidebar.selectbox(
+    "Select a page",
+    tab_options,
+    index=tab_options.index(st.session_state.get("tab", "Live Market")),
+    key="tab",
+)
 if tab == "Bitcoin News":
     
     day_options = {
@@ -1322,7 +1345,7 @@ if tab == "Bitcoin News":
 
     st.subheader("📈 Bitcoin Market Stats")
     btc_range_options = range_options  # show 1 Day / 1 Week / 1 Month / 6 Months / 1 Year
-    sel = st.pills("Bitcoin price range:", options=list(btc_range_options.keys()), default="1 Day", key="btc_range")
+    sel = st.pills("Bitcoin price range:", options=list(btc_range_options.keys()), default=st.session_state["btc_range"], key="btc_range")
     selected_range = btc_range_options.get(sel, "1mo")
     with st.spinner("Loading BTC price…"):
         data = get_history(btc, selected_range)
@@ -1586,8 +1609,8 @@ if tab == "Bitcoin News":
     with col1:
         header_slot = st.container()
 
-        tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default="CleanSpark Only", key="tw_scope")
-        tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default="Likes", key="tw_sort")
+        tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default=st.session_state["tw_scope"], key="tw_scope")
+        tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default=st.session_state["tw_sort"], key="tw_sort")
         tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
         tw_max_days = 2 
         
@@ -1638,13 +1661,12 @@ if tab == "Bitcoin News":
     with col2:
         header_slot = st.container()
         scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
-        gen_scope = st.pills("Article Scope:", scope_options, default="All Bitcoin", key="news_scope_filter")
-
+        gen_scope = st.pills("Article Scope:", scope_options, default=st.session_state["news_scope_filter"], key="news_scope_filter")
         gen_col1, gen_col2 = st.columns([1, 1])
         with gen_col1:
-            gen_days = st.pills("Articles from the past...", list(day_options.keys()), default="1 Day", key="news_days_filter")
+            gen_days = st.pills("Articles from the past.", list(day_options.keys()), default=st.session_state["news_days_filter"], key="news_days_filter")
         with gen_col2:
-            gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default="Popularity", key="news_sort_filter")
+            gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default=st.session_state["news_sort_filter"], key="news_sort_filter")
 
         if gen_scope == "CleanSpark Only":
             query_term = "CleanSpark"
@@ -1704,10 +1726,10 @@ if tab == "Live Market":
         m1, m2 = st.columns([1.5, 2.5])
         with m1:
             raw = st.text_input(
-                "Stock ticker:", 
-                "CLSK", 
+                "Stock ticker:",
+                value=st.session_state["stock_lookup_ticker"],
                 key="stock_lookup_ticker",
-                placeholder="e.g., CLSK"
+                placeholder="e.g. CLSK"
             )
             sym = (raw or "").strip().upper()
             cik = cik_map.get(sym) if sym else None
@@ -1720,7 +1742,7 @@ if tab == "Live Market":
         
         with m2:
             market_range_options = range_options  # include 1 Week
-            lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), default="1 Day", key="lookup_range")
+            lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), default=st.session_state["lookup_range"], key="lookup_range")
             selected_range = market_range_options.get(lookup_range, "1mo")
             extended_range = selected_range
 
@@ -1967,14 +1989,8 @@ if tab == "Live Market":
 
     st.subheader("📊 Live Competition View")
 
-    comp_range = st.pills(
-        "Select Time Range:",
-        options=list(range_options.keys()),
-        default="1 Day",
-        key="comp_chart_range"
-    )
+    comp_range = st.pills("Timeframe:", options=list(range_options.keys()), default=st.session_state["comp_chart_range"], key="comp_chart_range")
     comp_selected_period = range_options.get(comp_range, "1mo")
-
     competitors = get_competitor_prices(competitor_tickers)
 
     m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13 = st.columns(13)
@@ -2004,14 +2020,9 @@ if tab == "Live Market":
             )
 
     # Ticker selector
-    comp_selected_tickers = st.multiselect(
-        "Select companies to compare:",
-        options=competitor_tickers,
-        default=["CLSK", "MARA"],
-        key="comp_chart_tickers"
-    )
-
+    comp_selected_tickers = st.multiselect("Select companies to compare:", options=competitor_tickers, default=st.session_state["comp_chart_tickers"], key="comp_chart_tickers")
     combined_df = None
+
     for ticker in comp_selected_tickers:
         df = fetch_comp_price_series(ticker, comp_selected_period)
         if df is not None and not df.empty:
@@ -2135,8 +2146,7 @@ if tab == "Live Market":
 
     # Build dynamic options list
     pill_options = ["Current Metrics"] + available_quarters
-    quarter = st.pills("Select View:", pill_options, default=pill_options[0], key="quarter_selector")
-
+    quarter = st.pills("Select View:", pill_options, default=st.session_state["quarter_selector"], key="quarter_selector")
     with st.spinner("Loading competitor metrics…"):
         is_current_metrics = (quarter == "Current Metrics")
 
