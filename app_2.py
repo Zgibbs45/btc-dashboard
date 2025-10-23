@@ -1327,6 +1327,18 @@ if tab == "Bitcoin News":
     with st.spinner("Loading BTC price…"):
         data = get_history(btc, selected_range)
 
+    window_ref = window_last = delta_abs = delta_pct = None
+    try:
+        s = data["Close"].dropna()
+        if len(s) >= 2:
+            window_ref = float(s.iloc[0])
+            window_last = float(s.iloc[-1])
+            delta_abs = window_last - window_ref
+            if window_ref != 0:
+                delta_pct = (delta_abs / window_ref) * 100.0
+    except Exception:
+        pass
+    
     if not data.empty:
         stats = fetch_btc_market_stats()
 
@@ -1353,7 +1365,10 @@ if tab == "Bitcoin News":
 
             st.subheader("Market Stats")
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Price (USD)", f"{stats['price_usd']:,.2f}")
+            delta_display = (f"{delta_abs:+,.2f} ({delta_pct:+.1f}%)"
+                 if delta_abs is not None and delta_pct is not None else None)
+
+            c1.metric("Price (USD)", f"{stats['price_usd']:,.2f}", delta=delta_display)
             c2.metric("Circulating Supply", fmt_btc(circulating))
             c3.metric("Max Supply", fmt_btc(max_supply))
             c4.metric("Market Cap", fmt_usd(stats["market_cap_usd"]))
