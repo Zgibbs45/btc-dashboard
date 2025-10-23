@@ -803,6 +803,22 @@ def fetch_comp_price_series(ticker, period):
         st.warning(f"Error fetching {ticker}: {e}")
         return None
 
+@st.cache_data(ttl=300, show_spinner=False)
+def percent_change_over_period(ticker: str, period: str) -> float | None:
+    """Return % change from first to last close in the selected period (1d=5m bars, else=1d)."""
+    try:
+        interval = "5m" if period == "1d" else "1d"
+        df = history_cached(ticker, period=period, interval=interval)
+        close = df["Close"].dropna()
+        if len(close) < 2:
+            return None
+        ref, last = float(close.iloc[0]), float(close.iloc[-1])
+        if ref == 0:
+            return None
+        return ((last - ref) / ref) * 100.0
+    except Exception:
+        return None
+
 @st.cache_data(ttl=900)
 def get_latest_sec_fact_with_fallback(cik, tags, year_cutoff=2024, expected_duration=90, tolerance=10, start_date=None, end_date=None):
     if cik is None:
@@ -1935,21 +1951,29 @@ if tab == "Live Market":
 
 
     st.subheader("📊 Live Competition View")
+
+    comp_range = st.pills(
+        "Select Time Range:",
+        options=list(range_options.keys()),
+        default="1 Day",
+        key="comp_chart_range"
+    )
+    comp_selected_period = range_options.get(comp_range, "1mo")
+
     competitors = get_competitor_prices(competitor_tickers)
 
-    m1, m2, m3, m4, m5,m6 ,m7, m8, m9, m10, m11, m12, m13= st.columns(13)
-    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11,m12, m13]
+    m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13 = st.columns(13)
+    col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13]
 
     for i, comp in enumerate(competitors):
         if i >= len(col_map):
             break
         with col_map[i]:
-            if comp["symbol"] == sym:
-                comp_price = price
-                comp_change = change_percent
-            else:
-                comp_price = comp["price"]
-                comp_change = comp["change"]
+            comp_price = (price if comp["symbol"] == sym and price is not None else comp["price"])
+
+            comp_change = percent_change_over_period(comp["symbol"], comp_selected_period)
+            if comp_change is None:
+                comp_change = comp["change"]  # fallback to previous-close method
 
             arrow = "🔺" if comp_change >= 0 else "🔻"
             color = "green" if comp_change >= 0 else "red"
@@ -1963,15 +1987,6 @@ if tab == "Live Market":
                 """,
                 unsafe_allow_html=True
             )
-    # Live Competition View Chart
-    # New range selector just for this chart
-    comp_range = st.pills(
-        "Select Time Range:",
-        options=list(range_options.keys()),
-        default="1 Day",
-        key="comp_chart_range"
-    )
-    comp_selected_period = range_options.get(comp_range, "1mo")
 
     # Ticker selector
     comp_selected_tickers = st.multiselect(
