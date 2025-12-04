@@ -548,7 +548,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
 
     next_token = None
     pages = 0
-    PAGES_TO_FETCH = 3
+    PAGES_TO_FETCH = 5
     while pages < PAGES_TO_FETCH:
         params = dict(base_params)
         if next_token:
@@ -2245,3 +2245,4 @@ if tab == "Live Market":
     st.markdown("#### 🔗 Filing Report Links")
     for idx, row in df.iterrows():
         st.markdown(f"- **{idx}** ({row['Name']}): {row['Last Report']}", unsafe_allow_html=True)
+
