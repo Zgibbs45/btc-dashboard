@@ -515,7 +515,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
         st.markdown(f'<div class="article-meta">{src} · {pub}</div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=1800)
-def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="likes", max_results=15):
+def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="likes", max_results=15, pages_to_fetch=1):
     """
     Fetch recent tweets then sort locally by engagement.
     Uses pagination so popular tweets older than the most recent 100 still appear.
@@ -548,7 +548,8 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
 
     next_token = None
     pages = 0
-    while True:
+    PAGES_TO_FETCH = 3
+    while pages < PAGES_TO_FETCH:
         params = dict(base_params)
         if next_token:
             params["next_token"] = next_token
@@ -569,13 +570,11 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
                 media_by_key[m["media_key"]] = m
 
         all_tweets.extend(page_tweets)
-        pages += 3
+        pages += 1
 
         meta = payload.get("meta", {}) or {}
         next_token = meta.get("next_token")
 
-        if len(all_tweets) >= max_results:
-            break
         try:
             oldest = min((date_parser.parse(t["created_at"]) for t in page_tweets), default=None)
             if oldest and oldest < cutoff:
