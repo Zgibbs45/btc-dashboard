@@ -22,7 +22,7 @@ from urllib.parse import quote
 st.set_page_config(layout="wide")
 
 DEFAULTS = {
-    "tab": "Live Market",
+    "tab": "Bitcoin News",
     "stock_lookup_ticker": "CLSK",
     "lookup_range": "1 Day",
     "btc_range": "1 Day",
@@ -1334,7 +1334,7 @@ tab_options = ["Bitcoin News", "Live Market"]
 tab = st.sidebar.selectbox(
     "Select a page",
     tab_options,
-    index=tab_options.index(st.session_state.get("tab", "Bitcoin News")),
+    index=tab_options.index(st.session_state.get("tab", "Bitcoin news")),
     key="tab",
 )
 if tab == "Bitcoin News":
