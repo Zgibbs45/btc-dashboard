@@ -547,7 +547,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
     media_by_key = {}
 
     next_token = None
-    pages = 3
+    pages = 0
     while True:
         params = dict(base_params)
         if next_token:
@@ -569,7 +569,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
                 media_by_key[m["media_key"]] = m
 
         all_tweets.extend(page_tweets)
-        pages += 1
+        pages += 3
 
         meta = payload.get("meta", {}) or {}
         next_token = meta.get("next_token")
