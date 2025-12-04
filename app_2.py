@@ -516,10 +516,7 @@ def load_articles(key, query, exclude=None, from_days=30, sort_by="popularity", 
 
 @st.cache_data(ttl=1800)
 def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="likes", max_results=15, pages_to_fetch=1):
-    """
-    Fetch recent tweets then sort locally by engagement.
-    Uses pagination so popular tweets older than the most recent 100 still appear.
-    """
+
     headers = {"Authorization": f"Bearer {st.secrets['TWITTER_BEARER_TOKEN']}"}
 
     # Avoid cashtag operator ($CLSK) – not available on some tiers.
@@ -532,9 +529,11 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
     cutoff = datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)
     url = "https://api.twitter.com/2/tweets/search/recent"
 
+    PER_PAGE = 100  # how many tweets to request per API page
+
     base_params = {
         "query": query,
-        "max_results": min(max_results, 100),
+        "max_results": PER_PAGE,
         "tweet.fields": "public_metrics,created_at,author_id,entities,lang",
         "start_time": cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "expansions": "attachments.media_keys,author_id",
@@ -2245,4 +2244,3 @@ if tab == "Live Market":
     st.markdown("#### 🔗 Filing Report Links")
     for idx, row in df.iterrows():
         st.markdown(f"- **{idx}** ({row['Name']}): {row['Last Report']}", unsafe_allow_html=True)
-
