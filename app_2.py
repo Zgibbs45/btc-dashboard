@@ -714,15 +714,25 @@ def log_feedback(entry: dict):
     except Exception as e:
         if st.session_state.get("debug_feedback"):
             st.info(f"Saved to CSV; GitHub mirror error: {e}")
-
+            
+@st.cache_data(ttl=120, show_spinner=False)
+def safe_get_info(sym: str):
+    try:
+        return yf.Ticker(sym).get_info()
+    except Exception as e:
+        # Return a marker instead of raising every time
+        return {"_error": str(e)}
+    
 @st.cache_data(ttl=300)
 def get_competitor_prices(symbols):
     results = []
 
     for sym in symbols:
         try:
-            ticker = yf.Ticker(sym)
-            info = ticker.get_info()
+            info = safe_get_info(sym)
+            if "_error" in info:
+                st.warning(f"Error fetching data for {sym}: {info['_error']}")
+                continue
 
             price = info.get("regularMarketPrice")
             prev_close = info.get("regularMarketPreviousClose")
@@ -1324,7 +1334,7 @@ tab_options = ["Bitcoin News", "Live Market"]
 tab = st.sidebar.selectbox(
     "Select a page",
     tab_options,
-    index=tab_options.index(st.session_state.get("tab", "Live Market")),
+    index=tab_options.index(st.session_state.get("tab", "Bitcoin News")),
     key="tab",
 )
 if tab == "Bitcoin News":
@@ -1735,11 +1745,13 @@ if tab == "Live Market":
             extended_range = selected_range
 
         # Fetch data for selected ticker
-        ticker_obj = yf.Ticker(sym)
-    
-        try:
-            info = ticker_obj.get_info()
-        except Exception:
+        info = safe_get_info(sym)
+
+        if "_error" in info:
+            st.warning(
+                f"⚠️ Could not fetch company info for ticker: `{sym}` "
+                f"(possible rate limit). Displaying fallback values."
+            )
             info = {
                 "regularMarketPrice": None,
                 "open": None,
@@ -1750,9 +1762,8 @@ if tab == "Live Market":
                 "fiftyTwoWeekLow": None,
                 "volume": None,
                 "averageVolume": None,
-                "marketCap": None
+                "marketCap": None,
             }
-            st.warning(f"⚠️ Could not fetch company info for ticker: `{sym}`. Displaying fallback values.")
 
         # ROW 2: Show current price on its own line
         price = info.get("regularMarketPrice")
