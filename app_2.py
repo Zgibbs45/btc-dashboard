@@ -547,7 +547,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
     media_by_key = {}
 
     next_token = None
-    pages = 0
+    pages = 3
     while True:
         params = dict(base_params)
         if next_token:
