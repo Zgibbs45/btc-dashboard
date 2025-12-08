@@ -22,9 +22,6 @@ from urllib.parse import quote
 #STYLES
 st.set_page_config(layout="wide")
 
-if "btc_range" not in st.session_state:
-    st.session_state["btc_range"] = "1D"
-
 DEFAULTS = {
     "tab": "Bitcoin News",
     "stock_lookup_ticker": "CLSK",
@@ -1364,8 +1361,8 @@ if tab == "Bitcoin News":
     btc = yf.Ticker("BTC-USD")
 
     st.subheader("📈 Bitcoin Market Stats")
-    btc_range_options = range_options  # show 1 Day / 1 Week / 1 Month / 6 Months / 1 Year
-    sel = st.pills("Timeframe:", options=list(btc_range_options.keys()), default=st.session_state["btc_range"], key="btc_range")
+    btc_range_options = range_options
+    sel = st.pills("Timeframe:", options=list(btc_range_options.keys()), key="btc_range",)
     selected_range = btc_range_options.get(sel, "1mo")
     with st.spinner("Loading BTC price…"):
         data = get_history(btc, selected_range)
@@ -1622,8 +1619,8 @@ if tab == "Bitcoin News":
     with col1:
         header_slot = st.container()
 
-        tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], default=st.session_state["tw_scope"], key="tw_scope")
-        tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], default=st.session_state["tw_sort"], key="tw_sort")
+        tw_scope = st.pills("Tweet Scope:", ["All Bitcoin", "CleanSpark Only"], key="tw_scope")
+        tw_sort = st.pills("Sort tweets by:", ["Likes", "Retweets"], key="tw_sort")
         tw_scope_val = "CleanSpark" if tw_scope == "CleanSpark Only" else "General"
         tw_max_days = 2 
         
@@ -1674,12 +1671,12 @@ if tab == "Bitcoin News":
     with col2:
         header_slot = st.container()
         scope_options = ["All Bitcoin", "CleanSpark Only", "Regulatory Only"]
-        gen_scope = st.pills("Article Scope:", scope_options, default=st.session_state["news_scope_filter"], key="news_scope_filter")
+        gen_scope = st.pills("Article Scope:", scope_options, key="news_scope_filter")
         gen_col1, gen_col2 = st.columns([1, 1])
         with gen_col1:
-            gen_days = st.pills("Articles from the past:", list(day_options.keys()), default=st.session_state["news_days_filter"], key="news_days_filter")
+            gen_days = st.pills("Articles from the past:", list(day_options.keys()), key="news_days_filter")
         with gen_col2:
-            gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), default=st.session_state["news_sort_filter"], key="news_sort_filter")
+            gen_sort = st.pills("Sort by:", list(sort_by_map.keys()), key="news_sort_filter")
 
         if gen_scope == "CleanSpark Only":
             query_term = "CleanSpark"
@@ -1750,7 +1747,7 @@ if tab == "Live Market":
         
         with m2:
             market_range_options = range_options  # include 1 Week
-            lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), default=st.session_state["lookup_range"], key="lookup_range")
+            lookup_range = st.pills("Timeframe:", options=list(market_range_options.keys()), key="lookup_range")
             selected_range = market_range_options.get(lookup_range, "1mo")
             extended_range = selected_range
 
@@ -1988,7 +1985,7 @@ if tab == "Live Market":
 
     st.subheader("📊 Live Competition View")
 
-    comp_range = st.pills("Timeframe:", options=list(range_options.keys()), default=st.session_state["comp_chart_range"], key="comp_chart_range")
+    comp_range = st.pills("Timeframe:", options=list(range_options.keys()), key="comp_chart_range")
     comp_selected_period = range_options.get(comp_range, "1mo")
     competitors = get_competitor_prices(competitor_tickers)
 
@@ -2145,7 +2142,7 @@ if tab == "Live Market":
 
     # Build dynamic options list
     pill_options = ["Current Metrics"] + available_quarters
-    quarter = st.pills("Select View:", pill_options, default=st.session_state["quarter_selector"], key="quarter_selector")
+    quarter = st.pills("Select View:", pill_options, key="quarter_selector")
     with st.spinner("Loading competitor metrics…"):
         is_current_metrics = (quarter == "Current Metrics")
 
