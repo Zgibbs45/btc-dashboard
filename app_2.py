@@ -538,7 +538,7 @@ def get_cleanspark_tweets(query_scope="CleanSpark", max_age_days=2, sort_by="lik
     cutoff = datetime.now(ZoneInfo("UTC")) - timedelta(days=max_age_days)
     url = "https://api.twitter.com/2/tweets/search/recent"
 
-    PER_PAGE = 100  # how many tweets to request per API page
+    PER_PAGE = 50  # how many tweets to request per API page
 
     base_params = {
         "query": query,
