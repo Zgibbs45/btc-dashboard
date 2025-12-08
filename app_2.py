@@ -12,6 +12,7 @@ import html
 import altair as alt
 import math
 import csv
+from yfinance.exceptions import YFRateLimitError
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
 from dateutil import parser as date_parser
@@ -432,6 +433,20 @@ def get_coingecko_btc_data():
         st.text(f"Error: {e}")
         return {}
 
+def get_history(_ticker, period):
+    symbol = getattr(_ticker, "ticker", str(_ticker))
+
+    interval = "5m" if period == "1d" else "1d"
+
+    try:
+        # just always go through the cached wrapper
+        return history_cached(symbol, period=period, interval=interval)
+    except YFRateLimitError:
+        st.warning("Hit Yahoo Finance rate limit for BTC data. Try again in a minute.")
+        return pd.DataFrame()
+    except Exception:
+        return pd.DataFrame()
+
 @st.cache_data(ttl=90, show_spinner=False)
 def history_cached(symbol: str, *, period=None, interval="1d", start=None, end=None):
     """Centralized, memoized wrapper around yfinance.history."""
@@ -439,18 +454,6 @@ def history_cached(symbol: str, *, period=None, interval="1d", start=None, end=N
         return yf.Ticker(symbol).history(period=period, interval=interval, start=start, end=end)
     except Exception:
         return pd.DataFrame()
-
-def get_history(_ticker, period):
-    if period == "1d":
-        now = datetime.now(ZoneInfo("UTC"))
-        start = now - timedelta(hours=24)
-        df = _ticker.history(start=start, end=now, interval="5m")
-        if df is None or df.empty:
-            df = _ticker.history(period="1d", interval="5m")
-        return df
-    else:
-        interval = "5m" if period == "1d" else "1d" 
-        return history_cached(_ticker.ticker, period=period, interval=interval)
 
 @st.cache_data(ttl=1800) # 30 minutes
 def get_news(query, exclude=None, sort_by="popularity", page_size=10, from_days=30, page=1, domains=None):
