@@ -22,6 +22,9 @@ from urllib.parse import quote
 #STYLES
 st.set_page_config(layout="wide")
 
+if "btc_range" not in st.session_state:
+    st.session_state["btc_range"] = "1D"
+
 DEFAULTS = {
     "tab": "Bitcoin News",
     "stock_lookup_ticker": "CLSK",
@@ -403,6 +406,12 @@ def format_timestamp(iso_string):
         relative = f"{days} day{'s' if days != 1 else ''} ago"
 
     return f"{nice_time} ({relative})"
+
+@st.cache_data(ttl=300)
+def get_btc_data(period):
+    import yfinance as yf
+    btc = yf.Ticker("BTC-USD")
+    return btc.history(period=period)
 
 @st.cache_data(ttl=300)
 def get_coingecko_btc_data():
