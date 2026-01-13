@@ -722,41 +722,84 @@ def log_feedback(entry: dict):
         if st.session_state.get("debug_feedback"):
             st.info(f"Saved to CSV; GitHub mirror error: {e}")
             
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def safe_get_info(sym: str):
+    """
+    Light-ish fallback: try fast history first for price-ish fields.
+    Only use get_info as a last resort (it’s the thing that gets rate-limited).
+    """
+    try:
+        # Fast path: last 2 daily closes for price + prev close
+        df = history_cached(sym, period="5d", interval="1d")
+        if df is not None and not df.empty and "Close" in df:
+            close = df["Close"].dropna()
+            last = float(close.iloc[-1]) if len(close) >= 1 else None
+            prev = float(close.iloc[-2]) if len(close) >= 2 else None
+            return {
+                "regularMarketPrice": last,
+                "regularMarketPreviousClose": prev,
+            }
+    except Exception:
+        pass
+
+    # Last resort (may rate-limit)
     try:
         return yf.Ticker(sym).get_info()
     except Exception as e:
-        # Return a marker instead of raising every time
         return {"_error": str(e)}
     
-@st.cache_data(ttl=300)
-def get_competitor_prices(symbols):
-    results = []
+@st.cache_data(ttl=120, show_spinner=False)
+def get_competitor_prices(symbols, period="1mo"):
+    """
+    Batch fetch last + previous close for all symbols in a single Yahoo call.
+    This avoids per-ticker get_info() calls (main source of rate limits).
+    """
+    if not symbols:
+        return []
 
+    # For a '1d' view, still use daily closes for the tile price/prev close.
+    # (Your tile % uses percent_change_over_period() separately anyway.)
+    dl_period = "5d" if period == "1d" else "5d"
+    dl_interval = "1d"
+
+    try:
+        df = yf.download(
+            tickers=" ".join(symbols),
+            period=dl_period,
+            interval=dl_interval,
+            group_by="ticker",
+            auto_adjust=False,
+            progress=False,
+            threads=True,
+        )
+    except Exception as e:
+        # One warning total instead of 13 warnings
+        st.warning(f"Error fetching competitor prices (batch): {e}")
+        return [{"symbol": s, "price": None, "change": 0.0} for s in symbols]
+
+    results = []
     for sym in symbols:
         try:
-            info = safe_get_info(sym)
-            if "_error" in info:
-                st.warning(f"Error fetching data for {sym}: {info['_error']}")
+            # yfinance returns either multi-index columns (many tickers)
+            # or single-index columns (one ticker)
+            if isinstance(df.columns, pd.MultiIndex):
+                if (sym, "Close") not in df.columns:
+                    continue
+                close = df[(sym, "Close")].dropna()
+            else:
+                if "Close" not in df.columns:
+                    continue
+                close = df["Close"].dropna()
+
+            if len(close) < 1:
                 continue
 
-            price = info.get("regularMarketPrice")
-            prev_close = info.get("regularMarketPreviousClose")
+            price = float(close.iloc[-1])
+            prev_close = float(close.iloc[-2]) if len(close) >= 2 else None
+            change_percent = ((price - prev_close) / prev_close) * 100 if prev_close not in (None, 0) else 0.0
 
-            if price is None or prev_close is None or prev_close == 0:
-                continue
-
-            # ✅ Recalculate % change manually
-            change_percent = ((price - prev_close) / prev_close) * 100
-
-            results.append({
-                "symbol": sym,
-                "price": price,
-                "change": change_percent
-            })
-        except Exception as e:
-            st.warning(f"Error fetching data for {sym}: {e}")
+            results.append({"symbol": sym, "price": price, "change": change_percent})
+        except Exception:
             continue
 
     return results
@@ -1782,7 +1825,7 @@ if tab == "Live Market":
         )        
         clsk_price = clsk_open = clsk_high = clsk_low = None
         
-        if sym != "CLSK":
+        if True:
             clsk = yf.Ticker("CLSK")
             try:
                 clsk_info = clsk.get_info()
@@ -1987,7 +2030,7 @@ if tab == "Live Market":
 
     comp_range = st.pills("Timeframe:", options=list(range_options.keys()), key="comp_chart_range")
     comp_selected_period = range_options.get(comp_range, "1mo")
-    competitors = get_competitor_prices(competitor_tickers)
+    competitors = get_competitor_prices(competitor_tickers, comp_selected_period)
 
     m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13 = st.columns(13)
     col_map = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13]
