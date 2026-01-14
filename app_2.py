@@ -2199,18 +2199,14 @@ if tab == "Live Market":
         df_rows = []
         for ticker in competitor_tickers:
             cik = cik_map.get(ticker)
-            name = yf.Ticker(ticker).info.get("shortName", ticker)
+            name = ticker
             row = {"Ticker": ticker, "Name": name}
             sources_used = []
             sec_data = {}
-
-            # quarter bounds (per your selection)
             if is_current_metrics:
                 start_date = end_date = None
             else:
                 start_date, end_date = get_quarter_date_bounds(quarter)
-
-            # 1) PRESS (only for Current Metrics)
             if is_current_metrics:
                 press = get_latest_press_release_metrics(name, ticker)
                 if press and press.get("url"):
@@ -2218,7 +2214,6 @@ if tab == "Live Market":
                     press_url = press.get("url")
                     for label, val_str in press["metrics"].items():
                         try:
-                            # normalize to float first; ignore EH/s strings that don’t parse
                             val_clean = float(
                                 val_str.replace("$", "").replace(",", "").replace(" BTC", "").strip()
                             )
@@ -2226,12 +2221,9 @@ if tab == "Live Market":
                         except Exception:
                             pass
                     sources_used.append(("Press", press_date, press_url))
-
-            # 2) SEC fallback (single most-recent filing)
             latest_accn = None
             latest_date = None
             latest_values = {}
-
             for label, tags in SEC_FACTS.items():
                 if label in sec_data or not cik:
                     continue
@@ -2243,15 +2235,12 @@ if tab == "Live Market":
                         latest_accn = accn
                         latest_date = date
                     latest_values[label] = (val, accn)
-
             if latest_accn:
                 sec_url = get_latest_edgar_inline_url(cik, accn=latest_accn)
                 for label, (val, accn) in latest_values.items():
                     if accn == latest_accn:
                         sec_data[label] = val
                 sources_used.append(("SEC", latest_date, sec_url))
-
-            # 3) finalize row
             for label in SEC_FACTS.keys():
                 row[label] = sec_data.get(label, None)
 
@@ -2280,7 +2269,6 @@ if tab == "Live Market":
             else:
                 df[label] = s.apply(lambda v: f"${v:,.2f}" if pd.notna(v) else "–")
                     
-    # Define formatting
     def get_formatter(col):
         if "Bitcoin" in col:
             return "{:,.0f} BTC"
@@ -2291,7 +2279,6 @@ if tab == "Live Market":
 
     formatters = {col: get_formatter(col) for col in SEC_FACTS.keys() if df[col].dtype in ['float64', 'int64']}
 
-    # Display table with custom formats and clickable date link
     st.dataframe(df.drop(columns=["Last Report"]), use_container_width=True)
     st.markdown("#### 🔗 Filing Report Links")
     for idx, row in df.iterrows():
